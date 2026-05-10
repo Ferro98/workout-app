@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/*
+  Dark mode: Tailwind v4 usa `@variant dark` con media query di sistema.
+  Per aggiungere un toggle manuale in futuro, aggiungi `darkMode: 'class'`
+  nella config e gestiscilo nel contesto auth.
+*/
+
+/* Safe area per dispositivi con notch/home indicator */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Scroll fluido ovunque */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overscroll-behavior: none;
+}
