@@ -1,7 +1,5 @@
 export type Role = 'client' | 'coach'
-
 export type ExerciseType = 'weight' | 'bodyweight' | 'timed' | 'timed_weight'
-
 export type DiffStatus = 'new' | 'modified' | 'removed' | 'unchanged'
 
 export interface DiffItem {
@@ -9,6 +7,12 @@ export interface DiffItem {
   label: string
   prev: string | number
   curr: string | number
+}
+
+export interface SetDiff {
+  setIndex: number
+  changes: DiffItem[]   // es. [{field:'reps', label:'Rip', prev:8, curr:9}, ...]
+  status: 'modified' | 'added' | 'removed'
 }
 
 export interface HistoryEntry {
@@ -23,13 +27,15 @@ export interface Exercise {
   type: ExerciseType
 }
 
-// RPE target per singola serie (impostato dal coach)
 export interface TargetSet {
-  setIndex: number           // 0-based
-  rpe: number                // RPE target for this series
-  reps?: number              // override default reps for this set
-  duration?: number          // override default duration for this set (seconds)
-  restSeconds?: number       // optional rest override after this set
+  setIndex: number
+  rpe: number
+  reps?: number           // se omesso, usa ProgramExercise.reps come fallback
+  duration?: number       // durata totale serie in secondi
+  tempoPerRep?: string    // es. "4-1-2-0" eccentrica-pausa-concentrica-pausa
+  suggestedWeight?: string // es. "80" — suggerimento peso del coach
+  restSeconds?: number    // override recupero dopo questa serie (sovrascrive restSeconds dell'esercizio)
+  note?: string           // nota del coach su questa serie specifica
 }
 
 export interface ProgramExercise {
@@ -38,50 +44,50 @@ export interface ProgramExercise {
   name: string
   type: ExerciseType
   sets: number
-  reps: number | null        // null per esercizi timed
-  duration: number | null    // secondi, null per esercizi a reps
-  targetSets: TargetSet[]    // RPE per singola serie
-  restSeconds: number
-  notes: string | null       // nota del coach sull'esercizio
+  reps: number | null       // default reps (fallback se TargetSet non lo specifica)
+  duration: number | null   // default durata in secondi
+  restSeconds: number       // recupero default tra serie
+  targetSets: TargetSet[]   // uno per serie — fonte di verità
+  notes: string | null      // nota del coach sull'esercizio
   diff: DiffStatus
-  diffItems: DiffItem[]
+  diffItems: DiffItem[]   // diff campi top-level (es. numero serie cambiato)
+  setDiffs:  SetDiff[]    // diff per singola serie
   lastWeight: string | null
   history: HistoryEntry[]
 }
 
-// Un giorno di allenamento dentro una scheda
 export interface ProgramDay {
   id: number
-  dayIndex: number           // 0-based
-  name: string               // es. "Giorno A"
-  focus: string              // es. "Petto / Tricipiti"
+  dayIndex: number
+  name: string
+  focus: string
   exercises: ProgramExercise[]
   coachNote: string | null
 }
 
 export interface Program {
   id: number
-  name: string               // es. "Scheda Settimana 1"
+  name: string
   clientId: number
   createdAt: string
   isActive: boolean
-  coachNote: string | null   // nota generale sull'intera scheda
+  coachNote: string | null
   days: ProgramDay[]
 }
 
-// --- Workout (sessione in corso) ---
+// --- Workout ---
 
 export interface WorkoutSetState {
   completed: boolean
-  actualReps: string         // stringa per input libero
-  actualWeight: string       // solo numero es. "82.5"
-  actualRir: string          // RIR percepito dal cliente
-  note: string
+  actualReps: string
+  actualWeight: string   // solo numero, unità fissa kg
+  actualRir: string
+  note: string           // nota salvabile dal cliente su questa serie
 }
 
 export interface WorkoutExerciseState {
   sets: WorkoutSetState[]
-  note: string
+  note: string           // nota generale sull'esercizio
 }
 
 export interface WorkoutSession {

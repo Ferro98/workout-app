@@ -16,8 +16,17 @@ interface Props {
 }
 
 function paramsString(ex: ProgramExercise): string {
-    const repsOrDur = ex.duration !== null ? `${ex.duration}s` : `${ex.reps} rip`
-    return `${ex.sets} × ${repsOrDur} · RPE ${ex.rpe} · rec ${ex.restSeconds}s`
+    const isTimed = ex.type === 'timed' || ex.type === 'timed_weight'
+    const vals = ex.targetSets
+        .map(ts => isTimed ? (ts.duration ?? ex.duration) : (ts.reps ?? ex.reps))
+        .filter((v): v is number => v !== null && v !== undefined)
+    const unit = isTimed ? 's' : ' rip'
+    const min = Math.min(...vals), max = Math.max(...vals)
+    const repsStr = min === max ? `${min}${unit}` : `${min}–${max}${unit}`
+    const rpeVals = ex.targetSets.map(ts => ts.rpe)
+    const minRpe = Math.min(...rpeVals), maxRpe = Math.max(...rpeVals)
+    const rpeStr = minRpe === maxRpe ? `RPE ${minRpe}` : `RPE ${minRpe}–${maxRpe}`
+    return `${ex.sets} × ${repsStr} · ${rpeStr} · rec ${ex.restSeconds}s`
 }
 
 const diffIcons = {
@@ -78,24 +87,41 @@ export function ExerciseCard({ exercise: ex, index, showDiff }: Props) {
                 <div className="border-t border-neutral-200 dark:border-neutral-800 px-4 py-3 space-y-4">
 
                     {/* Grid parametri */}
-                    <div className="grid grid-cols-2 gap-2">
-                        {[
-                            { val: ex.sets, label: 'serie' },
-                            { val: ex.duration !== null ? `${ex.duration}s` : `${ex.reps} rip`, label: ex.duration !== null ? 'durata' : 'ripetizioni' },
-                            { val: `RPE ${ex.rpe}`, label: 'intensità target' },
-                            { val: `${ex.restSeconds}s`, label: 'recupero' },
-                        ].map(p => (
-                            <div key={p.label} className="bg-neutral-50 dark:bg-neutral-900 rounded-lg px-3 py-2">
-                                <p className="text-[15px] font-medium text-neutral-900 dark:text-neutral-100">
-                                    {p.val}
-                                </p>
-                                <p className="text-[11px] text-neutral-400 mt-0.5">{p.label}</p>
-                            </div>
-                        ))}
+                    <div className="space-y-1 mb-2">
+                        <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">
+                            Serie
+                        </p>
+                        {ex.targetSets.map((ts, i) => {
+                            const isTimed = ex.type === 'timed' || ex.type === 'timed_weight'
+                            const val = isTimed ? (ts.duration ?? ex.duration) : (ts.reps ?? ex.reps)
+                            const unit = isTimed ? 's' : ' rip'
+                            return (
+                                <div key={i} className="flex items-center gap-2 py-1.5 border-b
+                               border-neutral-100 dark:border-neutral-800 last:border-0">
+                                    <span className="w-5 text-[11px] text-neutral-400 shrink-0">{i + 1}</span>
+                                    <span className="text-[13px] text-neutral-900 dark:text-neutral-100 w-16">
+                                        {val}{unit}
+                                    </span>
+                                    <span className="text-[12px] text-neutral-500">RPE {ts.rpe}</span>
+                                    {ts.tempoPerRep && (
+                                        <span className="text-[11px] text-violet-500 ml-1">{ts.tempoPerRep}</span>
+                                    )}
+                                    {ts.suggestedWeight && (
+                                        <span className="text-[11px] text-neutral-400 ml-auto">{ts.suggestedWeight} kg</span>
+                                    )}
+                                    {ts.note && (
+                                        <span className="text-[11px] text-violet-500 ml-auto italic">💬 {ts.note}</span>
+                                    )}
+                                </div>
+                            )
+                        })}
+                        <div className="flex gap-2 pt-1">
+                            <span className="text-[11px] text-neutral-400">Recupero: {ex.restSeconds}s</span>
+                        </div>
                     </div>
 
                     {/* Diff — solo se showDiff e ci sono modifiche */}
-                    {showDiff && (ex.diffItems.length > 0 || ex.diff === 'new') && (
+                    {showDiff && (ex.setDiffs.length > 0 || ex.diff === 'new') && (
                         <div>
                             <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-2">
                                 Modifiche vs scheda precedente
@@ -103,30 +129,57 @@ export function ExerciseCard({ exercise: ex, index, showDiff }: Props) {
                             {ex.diff === 'new' ? (
                                 <div className="flex items-center gap-3 py-1.5">
                                     <span className="w-7 h-7 rounded-full bg-green-50 dark:bg-green-950/50
-                                   flex items-center justify-center text-green-700 dark:text-green-300 shrink-0">
-                                        {diffIcons.new}
+                         flex items-center justify-center text-green-700 shrink-0">
+                                        <IconSparkles size={13} aria-hidden />
                                     </span>
                                     <p className="text-[13px] text-neutral-600 dark:text-neutral-400">
-                                        Esercizio nuovo in questa scheda
+                                        Esercizio nuovo
                                     </p>
                                 </div>
                             ) : (
-                                ex.diffItems.map(d => (
-                                    <div key={d.field} className="flex items-center gap-3 py-1.5
-                       border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-                                        <span className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/50
-                                     flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0">
-                                            {diffIcons.modified}
-                                        </span>
-                                        <div className="flex-1">
-                                            <p className="text-[13px] text-neutral-600 dark:text-neutral-400">{d.label}</p>
-                                            <p className="text-[12px] text-neutral-400 mt-0.5">
-                                                {d.prev}{' → '}
-                                                <span className="font-medium text-neutral-900 dark:text-neutral-100">{d.curr}</span>
-                                            </p>
+                                <>
+                                    {/* Diff top-level (es. numero serie) */}
+                                    {ex.diffItems.map(d => (
+                                        <div key={d.field} className="flex items-center gap-3 py-1.5
+               border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                                            <span className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/50
+                             flex items-center justify-center text-amber-700 shrink-0">
+                                                <IconTrendingUp size={13} aria-hidden />
+                                            </span>
+                                            <div className="flex-1">
+                                                <p className="text-[13px] text-neutral-600 dark:text-neutral-400">{d.label}</p>
+                                                <p className="text-[12px] text-neutral-400 mt-0.5">
+                                                    {d.prev} → <span className="font-medium text-neutral-900 dark:text-neutral-100">{d.curr}</span>
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))}
+                                    {/* Diff per-serie */}
+                                    {ex.setDiffs.filter(sd => sd.status !== 'modified' || sd.changes.length > 0).map(sd => (
+                                        <div key={sd.setIndex} className="flex items-start gap-3 py-1.5
+               border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                                            <span className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-medium
+              ${sd.status === 'added'
+                                                    ? 'bg-green-50 dark:bg-green-950/50 text-green-700'
+                                                    : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700'}`}>
+                                                {sd.setIndex + 1}
+                                            </span>
+                                            <div className="flex-1">
+                                                {sd.status === 'added' ? (
+                                                    <p className="text-[13px] text-neutral-600 dark:text-neutral-400">Serie aggiunta</p>
+                                                ) : (
+                                                    sd.changes.map(c => (
+                                                        <p key={c.field} className="text-[12px] text-neutral-500">
+                                                            {c.label}: <span>{c.prev}</span>
+                                                            {' → '}
+                                                            <span className="font-medium text-neutral-900 dark:text-neutral-100">{c.curr}</span>
+                                                        </p>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
                             )}
                         </div>
                     )}

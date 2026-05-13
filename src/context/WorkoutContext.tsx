@@ -1,4 +1,7 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react'
+import {
+    createContext, useContext, useState, useCallback,
+    useRef, useEffect, type ReactNode
+} from 'react'
 import type { ProgramDay, ProgramExercise, WorkoutSetState } from '../types'
 
 export interface ExState {
@@ -6,26 +9,19 @@ export interface ExState {
     note: string
 }
 
-function initExState(ex: ProgramExercise) {
+function initExState(ex: ProgramExercise): ExState {
     const isTimed = ex.type === 'timed' || ex.type === 'timed_weight'
-
     return {
         note: '',
-        sets: Array.from({ length: ex.sets }, (_, setIndex) => {
-            // Find specific target for this set index, or fallback to last defined target
-            const target = ex.targetSets.find(t => t.setIndex === setIndex)
-                ?? ex.targetSets.at(-1)
-                ?? { rpe: 8 }
-
-            // Determine default value: use per-set override if available, else exercise default
-            const defaultValue = isTimed
-                ? (target.duration ?? ex.duration)
-                : (target.reps ?? ex.reps)
-
+        sets: Array.from({ length: ex.sets }, (_, i) => {
+            const ts = ex.targetSets.find(t => t.setIndex === i) ?? ex.targetSets.at(-1)
+            const defaultVal = isTimed
+                ? String(ts?.duration ?? ex.duration ?? '')
+                : String(ts?.reps ?? ex.reps ?? '')
             return {
                 completed: false,
-                actualReps: defaultValue != null ? String(defaultValue) : '',
-                actualWeight: ex.lastWeight ?? '',
+                actualReps: defaultVal,
+                actualWeight: ts?.suggestedWeight ?? ex.lastWeight ?? '',
                 actualRir: '',
                 note: '',
             }
@@ -61,27 +57,34 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     const [elapsedSec, setElapsedSec] = useState(0)
     const [generalNote, setGeneralNote] = useState('')
     const [restSeconds, setRestSeconds] = useState<number | null>(null)
+
+    // Refs per accesso stabile nei callback senza dipendenze
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const selectedDayRef = useRef<ProgramDay | null>(null)
-    useEffect(() => {
-        selectedDayRef.current = selectedDay
-    }, [selectedDay])
+    useEffect(() => { selectedDayRef.current = selectedDay }, [selectedDay])
 
     const stopTimer = useCallback(() => {
-        if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+        }
     }, [])
 
     useEffect(() => () => stopTimer(), [stopTimer])
 
     const startDay = useCallback((day: ProgramDay) => {
+        stopTimer()
         setSelectedDay(day)
         setExStates(day.exercises.map(initExState))
         setElapsedSec(0)
         setGeneralNote('')
         setRestSeconds(null)
         setPhase('active')
-        stopTimer()
-        intervalRef.current = setInterval(() => setElapsedSec(s => s + 1), 1000)
+        // Avvia il timer DOPO aver settato tutto
+        intervalRef.current = setInterval(
+            () => setElapsedSec(s => s + 1),
+            1000
+        )
     }, [stopTimer])
 
     const finish = useCallback(() => {
@@ -99,40 +102,49 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         setRestSeconds(null)
     }, [stopTimer])
 
-    const updateSet = useCallback((exIdx: number, setIdx: number, field: keyof WorkoutSetState, val: string) => {
+    const updateSet = useCallback((
+        exIdx: number, setIdx: number,
+        field: keyof WorkoutSetState, val: string
+    ) => {
         setExStates(prev => prev.map((es, i) => {
             if (i !== exIdx) return es
-            return { ...es, sets: es.sets.map((s, si) => si === setIdx ? { ...s, [field]: val } : s) }
+            return {
+                ...es, sets: es.sets.map((s, si) =>
+                    si === setIdx ? { ...s, [field]: val } : s
+                )
+            }
         }))
     }, [])
 
     const completeSet = useCallback((exIdx: number, setIdx: number) => {
+        // Leggiamo lo stato prima dentro il setter per evitare stale closure
         setExStates(prev => {
-            const wasCompleted = prev[exIdx].sets[setIdx].completed
-            const newState = prev.map((es, i) => {
+            const wasCompleted = prev[exIdx]?.sets[setIdx]?.completed ?? false
+            const next = prev.map((es, i) => {
                 if (i !== exIdx) return es
                 return {
                     ...es,
                     sets: es.sets.map((s, si) =>
                         si === setIdx ? { ...s, completed: !s.completed } : s
-                    )
+                    ),
                 }
             })
-
-            // Only trigger rest when transitioning TO completed (not un-completing)
-            if (!wasCompleted && selectedDayRef.current) {
-                // Use setTimeout to ensure state flushes first
-                setTimeout(() => {
-                    const restTime = selectedDayRef.current?.exercises[exIdx]?.restSeconds ?? null
-                    setRestSeconds(restTime)
-                }, 0)
+            if (!wasCompleted) {
+                // Recupero: usa override per-serie se presente, altrimenti default esercizio
+                const ex = selectedDayRef.current?.exercises[exIdx]
+                const ts = ex?.targetSets.find(t => t.setIndex === setIdx) ?? ex?.targetSets.at(-1)
+                const sec = ts?.restSeconds ?? ex?.restSeconds ?? null
+                setRestSeconds(null)
+                setTimeout(() => setRestSeconds(sec), 0);
             }
-            return newState
+            return next
         })
     }, [])
 
     const updateNote = useCallback((exIdx: number, val: string) => {
-        setExStates(prev => prev.map((es, i) => i !== exIdx ? es : { ...es, note: val }))
+        setExStates(prev => prev.map((es, i) =>
+            i !== exIdx ? es : { ...es, note: val }
+        ))
     }, [])
 
     return (

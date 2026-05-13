@@ -6,7 +6,6 @@ import {
     IconBarbell,
     IconUser,
     IconUsers,
-    IconEdit,
     IconDatabase,
 } from '@tabler/icons-react'
 import type { Role } from '../../types'
@@ -21,7 +20,6 @@ const clientTabs = [
 
 const coachTabs = [
     { to: '/clienti', label: 'Clienti', Icon: IconUsers },
-    { to: '/editor', label: 'Schede', Icon: IconEdit },
     { to: '/esercizi', label: 'Esercizi', Icon: IconDatabase },
     { to: '/profilo', label: 'Profilo', Icon: IconUser },
 ]

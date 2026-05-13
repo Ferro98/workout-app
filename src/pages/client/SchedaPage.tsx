@@ -8,7 +8,7 @@ import { CURRENT_PROGRAM } from '../../data/mock'
 
 type Tab = 'scheda' | 'versioni'
 
-export function SchedaPage() {
+export default function SchedaPage() {
     const [activeTab, setActiveTab] = useState<Tab>('scheda')
     const [showDiff, setShowDiff] = useState(false)
     const [selectedDayId, setSelectedDayId] = useState<number>(CURRENT_PROGRAM.days[0].id)
