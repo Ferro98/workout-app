@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import (
@@ -21,7 +21,8 @@ class User(Base):
     coach_id:      Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     color_bg:      Mapped[Optional[str]] = mapped_column(String, nullable=True)
     color_text:    Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    created_at:    Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    is_active:     Mapped[bool]          = mapped_column(Boolean, default=True, nullable=False)
+    created_at:    Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     coach:    Mapped[Optional["User"]] = relationship("User", remote_side="User.id", foreign_keys=[coach_id], back_populates="clients")
     clients:  Mapped[list["User"]]     = relationship("User", foreign_keys=[coach_id], back_populates="coach")
@@ -37,7 +38,7 @@ class Exercise(Base):
     category:   Mapped[str]           = mapped_column(String, nullable=False)  # chest|back|legs|shoulders|arms|core
     type:       Mapped[str]           = mapped_column(String, nullable=False)  # weight|bodyweight|timed|timed_weight
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)  # NULL = sistema
-    created_at: Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     creator:           Mapped[Optional["User"]]         = relationship("User", foreign_keys=[created_by])
     program_exercises: Mapped[list["ProgramExercise"]]  = relationship("ProgramExercise", back_populates="exercise")
@@ -55,7 +56,7 @@ class Program(Base):
     is_active:  Mapped[bool]          = mapped_column(Boolean, default=False)
     version:    Mapped[int]           = mapped_column(Integer, default=1, nullable=False)
     parent_id:  Mapped[Optional[int]] = mapped_column(ForeignKey("programs.id"), nullable=True)
-    created_at: Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     client:       Mapped["User"]                  = relationship("User", foreign_keys=[client_id], back_populates="programs")
     coach:        Mapped["User"]                  = relationship("User", foreign_keys=[coach_id])
@@ -131,7 +132,7 @@ class Session(Base):
     client_id:    Mapped[int]                = mapped_column(ForeignKey("users.id"), nullable=False)
     program_id:   Mapped[int]                = mapped_column(ForeignKey("programs.id"), nullable=False)
     day_id:       Mapped[int]                = mapped_column(ForeignKey("program_days.id"), nullable=False)
-    started_at:   Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    started_at:   Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     ended_at:     Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_sec: Mapped[Optional[int]]      = mapped_column(Integer, nullable=True)
     general_note: Mapped[Optional[str]]      = mapped_column(Text, nullable=True)
@@ -155,7 +156,7 @@ class SessionSet(Base):
     actual_weight:       Mapped[Optional[str]] = mapped_column(String, nullable=True)
     actual_rir:          Mapped[Optional[str]] = mapped_column(String, nullable=True)
     note:                Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    logged_at:           Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    logged_at:           Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     session:          Mapped["Session"]         = relationship("Session", back_populates="sets")
     program_exercise: Mapped["ProgramExercise"] = relationship("ProgramExercise", back_populates="session_sets")
@@ -197,7 +198,7 @@ class ProgramDiff(Base):
     diff_type:           Mapped[str]           = mapped_column(String, nullable=False)  # new|modified|removed|unchanged
     diff_items:          Mapped[list]          = mapped_column(JSONB, nullable=False, default=list)  # DiffItem[]
     set_diffs:           Mapped[list]          = mapped_column(JSONB, nullable=False, default=list)  # SetDiff[]
-    created_at:          Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at:          Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     old_program:      Mapped["Program"]                   = relationship("Program", foreign_keys=[old_program_id], back_populates="diffs_as_old")
     new_program:      Mapped["Program"]                   = relationship("Program", foreign_keys=[new_program_id], back_populates="diffs_as_new")
