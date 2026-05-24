@@ -13,7 +13,7 @@ from pydantic import (
 )
 from pydantic.alias_generators import to_camel
 
-# --- CONFIGURAZIONE BASE ---
+# region --- CONFIGURAZIONE BASE ---
 class BaseSchema(BaseModel):
     """
     Classe base che configura automaticamente la conversione snake_case -> camelCase
@@ -25,8 +25,9 @@ class BaseSchema(BaseModel):
         from_attributes=True
     )
 
+# endregion
 
-# --- STRUTTURE DI SUPPORTO / DIFF / STORICO ---
+# region --- STRUTTURE DI SUPPORTO / DIFF / STORICO ---
 class DiffItem(BaseSchema):
     field: str
     label: str
@@ -42,16 +43,18 @@ class HistoryEntry(BaseSchema):
     date: str
     detail: str
 
+#endregion
 
-# --- EXERCISE SCHEMAS ---
+# region --- EXERCISE SCHEMAS ---
 class ExerciseBase(BaseSchema):
     id: int
     name: str
     category: str
     type: str
 
+# endregion
 
-# --- PROGRAM / SCHEDA SCHEMAS ---
+# region --- PROGRAM / SCHEDA SCHEMAS ---
 class TargetSetOut(BaseSchema):
     set_index: int
     rpe: int
@@ -63,6 +66,19 @@ class TargetSetOut(BaseSchema):
     # Nel DB è rest_sec_override, il frontend vuole restSeconds
     rest_seconds: Optional[int] = Field(None, alias="restSeconds", validation_alias=AliasChoices("restSeconds", "rest_sec_override"))
     note: Optional[str] = None
+
+class TargetSetCreate(BaseModel):
+    set_index: int
+    rpe: int
+    reps: Optional[int] = None
+    duration_sec: Optional[int] = Field(None, alias="duration")
+    tempo_per_rep: Optional[str] = None
+    suggested_weight: Optional[str] = None
+    rest_sec_override: Optional[int] = Field(None, alias="restSeconds")
+    note: Optional[str] = None
+
+    class Config:
+        populate_by_name = True
 
 class ProgramExerciseOut(BaseSchema):
     id: int
@@ -84,6 +100,20 @@ class ProgramExerciseOut(BaseSchema):
     last_weight: Optional[str] = None
     history: List[HistoryEntry] = Field(default_factory=list)
 
+class ProgramExerciseCreate(BaseModel):
+    exercise_id: int
+    type: str = "weight"
+    sort_order: int = 0
+    sets: int
+    reps: Optional[int] = None
+    duration_sec: Optional[int] = Field(None, alias="duration")
+    rest_sec: int = Field(..., alias="restSeconds")
+    notes: Optional[str] = None
+    target_sets: List[TargetSetCreate] = Field(default_factory=list)
+
+    class Config:
+        populate_by_name = True
+
 class ProgramDayOut(BaseSchema):
     id: int
     day_index: int
@@ -91,6 +121,13 @@ class ProgramDayOut(BaseSchema):
     focus: str
     exercises: List[ProgramExerciseOut] = Field(default_factory=list)
     coach_note: Optional[str] = None
+
+class ProgramDayCreate(BaseModel):
+    day_index: int
+    name: str
+    focus: str
+    coach_note: Optional[str] = None
+    exercises: List[ProgramExerciseCreate] = Field(default_factory=list)
 
 class ProgramOut(BaseSchema):
     id: int
@@ -105,9 +142,20 @@ class ProgramOut(BaseSchema):
     @field_serializer('created_at')
     def serialize_date(self, dt: datetime) -> str:
         return dt.strftime('%Y-%m-%d')
+    
+class ProgramCreate(BaseModel):
+    name: str
+    coach_note: Optional[str] = None
+    days: List[ProgramDayCreate] = Field(default_factory=list)
 
+class ProgramUpdate(BaseModel):
+    name: Optional[str] = None
+    coach_note: Optional[str] = None
+    is_active: Optional[bool] = None
 
-# --- WORKOUT / SESSION SCHEMAS ---
+# endregion
+
+# region --- WORKOUT / SESSION SCHEMAS ---
 class WorkoutSetState(BaseSchema):
     completed: bool
     actual_reps: str = Field("", validation_alias=AliasChoices("actual_reps", "actual_reps"))
@@ -166,8 +214,33 @@ class WorkoutSessionOut(BaseSchema):
             "exercises": list(exercise_map.values())
         }
 
+class SessionSetCreate(BaseModel):
+    program_exercise_id: int
+    set_index: int
+    completed: bool = True
+    actual_reps: Optional[str] = None
+    actual_weight: Optional[str] = None
+    actual_rir: Optional[str] = None
+    note: Optional[str] = None
 
-# --- CLIENT SCHEMA ---
+    class Config:
+        populate_by_name = True
+
+class SessionCreate(BaseModel):
+    program_id: int
+    day_id: int
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = Field(None, alias="durationSeconds")
+    general_note: Optional[str] = None
+    sets: List[SessionSetCreate] = Field(default_factory=list)
+
+    class Config:
+        populate_by_name = True
+
+# endregion
+
+# region --- CLIENT SCHEMA ---
 class ClientOut(BaseSchema):
     id: int
     name: str = Field(..., validation_alias=AliasChoices("name", "full_name"))
@@ -185,3 +258,5 @@ class ClientOut(BaseSchema):
             return ""
         parts = self.name.split()
         return "".join([p[0].upper() for p in parts if p])[:2]
+    
+# endregion
