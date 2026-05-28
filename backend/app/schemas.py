@@ -77,8 +77,7 @@ class TargetSetCreate(BaseModel):
     rest_sec_override: Optional[int] = Field(None, alias="restSeconds")
     note: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class ProgramExerciseOut(BaseSchema):
     id: int
@@ -111,8 +110,7 @@ class ProgramExerciseCreate(BaseModel):
     notes: Optional[str] = None
     target_sets: List[TargetSetCreate] = Field(default_factory=list)
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class ProgramDayOut(BaseSchema):
     id: int
@@ -223,8 +221,7 @@ class SessionSetCreate(BaseModel):
     actual_rir: Optional[str] = None
     note: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class SessionCreate(BaseModel):
     program_id: int
@@ -235,8 +232,7 @@ class SessionCreate(BaseModel):
     general_note: Optional[str] = None
     sets: List[SessionSetCreate] = Field(default_factory=list)
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 # endregion
 
