@@ -2,6 +2,8 @@ export type Role = 'client' | 'coach'
 export type ExerciseType = 'weight' | 'bodyweight' | 'timed' | 'timed_weight'
 export type DiffStatus = 'new' | 'modified' | 'removed' | 'unchanged'
 
+// region --- STRUTTURE DI SUPPORTO / DIFF / STORICO ---
+
 export interface DiffItem {
   field: string
   label: string
@@ -20,12 +22,16 @@ export interface HistoryEntry {
   detail: string
 }
 
+// region --- EXERCISE SCHEMAS ---
+
 export interface Exercise {
   id: number
   name: string
   category: 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core'
   type: ExerciseType
 }
+
+// region -- PROGRAM / SCHEDA SCHEMAS ---
 
 export interface TargetSet {
   setIndex: number
@@ -38,9 +44,21 @@ export interface TargetSet {
   note?: string           // nota del coach su questa serie specifica
 }
 
+export interface TargetSetCreate {
+  setIndex: number
+  rpe: number
+  reps?: number | null
+  duration?: number | null
+  tempoPerRep?: string | null
+  suggestedWeight?: string | null
+  restSeconds?: number | null
+  note?: string | null
+}
+
 export interface ProgramExercise {
   id: number
   exerciseId: number
+  sortOrder: number
   name: string
   type: ExerciseType
   sets: number
@@ -56,6 +74,17 @@ export interface ProgramExercise {
   history: HistoryEntry[]
 }
 
+export interface ProgramExerciseCreate {
+  exerciseId: number
+  sortOrder: number           // Aggiunto per allineamento col DB
+  sets: number
+  reps?: number | null
+  duration?: number | null
+  restSeconds: number
+  notes?: string | null
+  targetSets: TargetSetCreate[]
+}
+
 export interface ProgramDay {
   id: number
   dayIndex: number
@@ -63,6 +92,14 @@ export interface ProgramDay {
   focus: string
   exercises: ProgramExercise[]
   coachNote: string | null
+}
+
+export interface ProgramDayCreate {
+  dayIndex: number
+  name: string
+  focus: string
+  coachNote?: string | null
+  exercises: ProgramExerciseCreate[]
 }
 
 export interface Program {
@@ -75,19 +112,27 @@ export interface Program {
   days: ProgramDay[]
 }
 
-// --- Workout ---
+export interface ProgramCreate {
+  name: string
+  coachNote?: string | null
+  days: ProgramDayCreate[]
+  // clientId NON c'è, perché solitamente si passa nell'URL della chiamata API
+}
+
+// region --- WORKOUT / SESSION SCHEMAS ---
 
 export interface WorkoutSetState {
   completed: boolean
   actualReps: string
   actualWeight: string   // solo numero, unità fissa kg
   actualRir: string
-  note: string           // nota salvabile dal cliente su questa serie
+  note: string | null           // nota salvabile dal cliente su questa serie
 }
 
 export interface WorkoutExerciseState {
+  programExerciseId: number
   sets: WorkoutSetState[]
-  note: string           // nota generale sull'esercizio
+  note: string | null           // nota generale sull'esercizio
 }
 
 export interface WorkoutSession {
@@ -97,21 +142,46 @@ export interface WorkoutSession {
   programName: string
   dayName: string
   date: string
-  durationSeconds: number
-  exercises: {
-    programExerciseId: number
-    sets: WorkoutSetState[]
-    note: string
-  }[]
-  generalNote: string
+  durationSeconds: number | null
+  exercises: WorkoutExerciseState[]
+  generalNote: string | null
 }
+
+export interface SessionSetCreate {
+  setIndex: number
+  completed: boolean
+  actualReps?: string | null
+  actualWeight?: string | null
+  actualRir?: string | null
+  note?: string | null
+}
+
+export interface SessionExerciseCreate {
+  programExerciseId: number
+  sets: SessionSetCreate[]
+  note?: string | null
+}
+
+export interface SessionCreate {
+  programId: number
+  programDayId: number
+  date: string                   // Equivale a started_at
+  endedAt?: string | null
+  durationSeconds?: number | null
+  generalNote?: string | null
+  exercises: SessionExerciseCreate[]
+}
+
+// endregion
+
+// region --- CLIENT ---
 
 export interface Client {
   id: number
   name: string
   initials: string
-  colorBg: string
-  colorText: string
+  colorBg: string | null
+  colorText: string | null
   activeProgramName: string | null
   lastSessionDate: string | null
   isActive: boolean

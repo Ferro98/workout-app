@@ -19,26 +19,30 @@ async def create_workout_session(db: AsyncSession, client_id: int, session_in: s
     )
 
     # Mappa temporanea per ricordarci quali program_exercise_id stiamo salvando
-    # Ci servirà subito dopo per popolare la history
     pe_ids = set()
 
-    # 2. Iteriamo sui set creati dal frontend e li colleghiamo alla sessione
-    for set_in in session_in.sets:
-        db_set = SessionSet(
-            program_exercise_id=set_in.program_exercise_id,
-            set_index=set_in.set_index,
-            completed=set_in.completed,
-            actual_reps=set_in.actual_reps,
-            actual_weight=set_in.actual_weight,
-            actual_rir=set_in.actual_rir,
-            note=set_in.note
-        )
-        db_session.sets.append(db_set)
-        pe_ids.add(set_in.program_exercise_id)
+    # 2. Iteriamo sui dati ANNIDATI (Esercizi -> Set) ricevuti dal frontend
+    for exercise_in in session_in.exercises:
+        pe_id = exercise_in.program_exercise_id
+        pe_ids.add(pe_id)
+        
+        # Srotoliamo le serie (sets) interne a ogni esercizio
+        for set_in in exercise_in.sets:
+            db_set = SessionSet(
+                program_exercise_id=pe_id,  # Lo prendiamo dall'esercizio "padre"
+                set_index=set_in.set_index,
+                completed=set_in.completed,
+                actual_reps=set_in.actual_reps,
+                actual_weight=set_in.actual_weight,
+                actual_rir=set_in.actual_rir,
+                note=set_in.note
+            )
+            # Aggiungiamo la serie alla sessione
+            db_session.sets.append(db_set)
 
     # Salviamo la sessione e i set a cascata per generare gli ID (fondamentali per la history)
     db.add(db_session)
-    await db.flush() # Usiamo flush() invece di commit() così teniamo la transazione aperta per lo step successivo
+    await db.flush() # Usiamo flush() invece di commit() così teniamo la transazione aperta
 
     # 3. LOGICA DI STORICIZZAZIONE (ExerciseHistory)
     if pe_ids:

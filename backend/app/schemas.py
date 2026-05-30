@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from backend.app.enums import DiffStatus, ExerciseCategory, ExerciseType
 from pydantic import (
     BaseModel, 
     ConfigDict, 
@@ -37,7 +38,7 @@ class DiffItem(BaseSchema):
 class SetDiff(BaseSchema):
     set_index: int
     changes: List[DiffItem]
-    status: str  # 'modified' | 'added' | 'removed'
+    status: DiffStatus
 
 class HistoryEntry(BaseSchema):
     date: str
@@ -49,8 +50,8 @@ class HistoryEntry(BaseSchema):
 class ExerciseBase(BaseSchema):
     id: int
     name: str
-    category: str
-    type: str
+    category: ExerciseCategory
+    type: ExerciseType
 
 # endregion
 
@@ -67,7 +68,7 @@ class TargetSetOut(BaseSchema):
     rest_seconds: Optional[int] = Field(None, alias="restSeconds", validation_alias=AliasChoices("restSeconds", "rest_sec_override"))
     note: Optional[str] = None
 
-class TargetSetCreate(BaseModel):
+class TargetSetCreate(BaseSchema):
     set_index: int
     rpe: int
     reps: Optional[int] = None
@@ -84,7 +85,7 @@ class ProgramExerciseOut(BaseSchema):
     exercise_id: int
     # Estraggono automaticamente il nome e il tipo dalla relazione SQLAlchemy 'exercise'
     name: str = Field(validation_alias=AliasChoices("name", AliasPath("exercise", "name")))
-    type: str = Field(validation_alias=AliasChoices("type", AliasPath("exercise", "type")))
+    type: ExerciseType = Field(validation_alias=AliasChoices("type", AliasPath("exercise", "type")))
     sets: int
     reps: Optional[int] = None
     duration: Optional[int] = Field(None, alias="duration", validation_alias=AliasChoices("duration", "duration_sec"))
@@ -93,15 +94,14 @@ class ProgramExerciseOut(BaseSchema):
     notes: Optional[str] = None
     
     # Campi dinamici iniettati dalle logiche di diff e history
-    diff: str = "unchanged"  # 'new' | 'modified' | 'removed' | 'unchanged'
+    diff: DiffStatus = DiffStatus.UNCHANGED  # 'new' | 'modified' | 'removed' | 'unchanged'
     diff_items: List[DiffItem] = Field(default_factory=list)
     set_diffs: List[SetDiff] = Field(default_factory=list)
     last_weight: Optional[str] = None
     history: List[HistoryEntry] = Field(default_factory=list)
 
-class ProgramExerciseCreate(BaseModel):
+class ProgramExerciseCreate(BaseSchema):
     exercise_id: int
-    type: str = "weight"
     sort_order: int = 0
     sets: int
     reps: Optional[int] = None
@@ -120,7 +120,7 @@ class ProgramDayOut(BaseSchema):
     exercises: List[ProgramExerciseOut] = Field(default_factory=list)
     coach_note: Optional[str] = None
 
-class ProgramDayCreate(BaseModel):
+class ProgramDayCreate(BaseSchema):
     day_index: int
     name: str
     focus: str
@@ -141,12 +141,12 @@ class ProgramOut(BaseSchema):
     def serialize_date(self, dt: datetime) -> str:
         return dt.strftime('%Y-%m-%d')
     
-class ProgramCreate(BaseModel):
+class ProgramCreate(BaseSchema):
     name: str
     coach_note: Optional[str] = None
     days: List[ProgramDayCreate] = Field(default_factory=list)
 
-class ProgramUpdate(BaseModel):
+class ProgramUpdate(BaseSchema):
     name: Optional[str] = None
     coach_note: Optional[str] = None
     is_active: Optional[bool] = None
@@ -212,8 +212,7 @@ class WorkoutSessionOut(BaseSchema):
             "exercises": list(exercise_map.values())
         }
 
-class SessionSetCreate(BaseModel):
-    program_exercise_id: int
+class SessionSetCreate(BaseSchema):
     set_index: int
     completed: bool = True
     actual_reps: Optional[str] = None
@@ -223,14 +222,22 @@ class SessionSetCreate(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-class SessionCreate(BaseModel):
-    program_id: int
-    day_id: int
-    started_at: datetime
-    ended_at: Optional[datetime] = None
-    duration_seconds: Optional[int] = Field(None, alias="durationSeconds")
-    general_note: Optional[str] = None
+class SessionExerciseCreate(BaseSchema):
+    program_exercise_id: int = ...
     sets: List[SessionSetCreate] = Field(default_factory=list)
+    note: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+class SessionCreate(BaseSchema):
+    program_id: int = ...
+    day_id: int = ...
+    started_at: datetime = ...
+    ended_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
+    general_note: Optional[str] = None
+    
+    exercises: List[SessionExerciseCreate] = Field(default_factory=list)
 
     model_config = ConfigDict(populate_by_name=True)
 

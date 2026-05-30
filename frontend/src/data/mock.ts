@@ -51,6 +51,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 1,
           exerciseId: 1,
+          sortOrder: 1,
           name: 'Panca Piana Bilanciere',
           type: 'weight',
           sets: 4,
@@ -89,6 +90,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 2,
           exerciseId: 3,
+          sortOrder: 2,
           name: 'Croci Cavi Alti',
           type: 'weight',
           sets: 3,
@@ -110,6 +112,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 3,
           exerciseId: 4,
+          sortOrder: 3,
           name: 'Dip alle Parallele',
           type: 'bodyweight',
           sets: 3,
@@ -133,6 +136,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 4,
           exerciseId: 24,
+          sortOrder: 4,
           name: 'Push-down Cavo — Tempo 3-1-1-0',
           type: 'weight',
           sets: 3,
@@ -154,6 +158,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 5,
           exerciseId: 26,
+          sortOrder: 5,
           name: 'Plank',
           type: 'timed',
           sets: 3,
@@ -184,6 +189,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 6,
           exerciseId: 6,
+          sortOrder: 1,
           name: 'Trazioni Lat Machine',
           type: 'weight',
           sets: 4,
@@ -206,6 +212,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 7,
           exerciseId: 8,
+          sortOrder: 2,
           name: 'Rematore Bilanciere',
           type: 'weight',
           sets: 3,
@@ -227,6 +234,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 8,
           exerciseId: 22,
+          sortOrder: 3,
           name: 'Curl Bilanciere',
           type: 'weight',
           sets: 3,
@@ -257,6 +265,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 9,
           exerciseId: 12,
+          sortOrder: 1,
           name: 'Squat Bilanciere',
           type: 'weight',
           sets: 4,
@@ -279,6 +288,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 10,
           exerciseId: 13,
+          sortOrder: 2,
           name: 'Leg Press',
           type: 'weight',
           sets: 3,
@@ -300,6 +310,7 @@ export const CURRENT_PROGRAM: Program = {
         {
           id: 11,
           exerciseId: 20,
+          sortOrder: 3,
           name: 'Alzate Laterali',
           type: 'weight',
           sets: 4,

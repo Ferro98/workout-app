@@ -1,3 +1,4 @@
+from backend.app.crud import diff_service
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -17,6 +18,34 @@ async def get_my_programs(
 ):
     programs = await crud_programs.get_programs_for_client(db=db, client_id=client.id)
     return programs
+
+@router.get("/active", response_model=schemas.ProgramOut)
+async def get_my_active_program(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(require_client) # L'utente loggato dal token
+):
+    """
+    Restituisce la scheda attiva per il cliente loggato, 
+    arricchita con lo storico e i diff rispetto alla scheda precedente.
+    """
+    # 1. Recupera l'oggetto ORM da SQLAlchemy
+    program_orm = await crud_programs.get_active_program_for_client(db=db, client_id=current_user.id)
+    if not program_orm:
+        raise HTTPException(status_code=404, detail="Nessuna scheda attiva trovata")
+
+    # 2. Converti l'oggetto ORM nel modello Pydantic 
+    # (Questo usa `from_attributes=True` che hai in BaseSchema)
+    program_out = schemas.ProgramOut.model_validate(program_orm)
+
+    # 3. Arricchisci l'oggetto Pydantic con i calcoli del Diff e dello Storico
+    # (Passiamo sia il DB che l'oggetto Pydantic da manipolare)
+    enriched_program = await diff_service.enrich_program_with_diffs(
+        db=db, 
+        client_id=current_user.id, 
+        program=program_out
+    )
+
+    return enriched_program
 
 @router.get("/{client_id}/program", response_model=schemas.ProgramOut)
 async def get_client_active_program(
