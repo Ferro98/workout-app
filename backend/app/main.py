@@ -7,7 +7,7 @@ from app.api import clients, exercises, programs, sessions, auth
 app = FastAPI(title="Workout App API")
 
 origins = [
-    "http://localhost:3000"
+    "http://localhost:5173"
 ]
 
 # Configura i CORS per far comunicare il frontend (es. React/Vue) col backend
@@ -22,6 +22,7 @@ app.add_middleware(
 # Collega tutte le rotte!
 # Tutte avranno il prefisso /api (es. /api/clients, /api/exercises)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(auth.router, prefix="/users", tags=["users"])
 app.include_router(clients.router, prefix="/api")
 # app.include_router(exercises.router, prefix="/api")
 app.include_router(programs.router, prefix="/api")

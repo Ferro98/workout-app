@@ -25,10 +25,11 @@ const coachTabs = [
 ]
 
 interface Props {
-    role: Role
+    role: Role | undefined
 }
 
 export function TabBar({ role }: Props) {
+    if (!role) return null
     const tabs = role === 'client' ? clientTabs : coachTabs
 
     return (

@@ -2,6 +2,33 @@ export type Role = 'client' | 'coach'
 export type ExerciseType = 'weight' | 'bodyweight' | 'timed' | 'timed_weight'
 export type DiffStatus = 'new' | 'modified' | 'removed' | 'unchanged'
 
+// region --- AUTH SCHEMAS ---
+
+export interface LoginPayload {
+  username: string; // FastAPI usa 'username' di default per l'OAuth2, anche se è un'email
+  password: string;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  name: string;
+  role: 'client' | 'coach'; 
+  coachId: number;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export interface UserMe {
+  id: number;
+  email: string;
+  name: string;
+  role: Role;
+}
+
 // region --- STRUTTURE DI SUPPORTO / DIFF / STORICO ---
 
 export interface DiffItem {

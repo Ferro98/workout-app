@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from backend.app.enums import DiffStatus, ExerciseCategory, ExerciseType
+from app.enums import DiffStatus, ExerciseCategory, ExerciseType
 from pydantic import (
     BaseModel, 
     ConfigDict, 

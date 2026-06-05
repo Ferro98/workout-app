@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr
 
 from ..db import get_db
 from ..models import User
-from ..auth import hash_password, verify_password, create_token
+from ..auth import get_current_user, hash_password, verify_password, create_token
 
 router = APIRouter()
 
@@ -76,3 +76,15 @@ async def login(
         user_id=user.id,
         full_name=user.full_name,
     )
+
+@router.get("/me")
+async def me(user: User = Depends(get_current_user)):
+    return {
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+        "coach_id": user.coach_id,
+        "color_bg": user.color_bg,
+        "color_text": user.color_text,
+    }
