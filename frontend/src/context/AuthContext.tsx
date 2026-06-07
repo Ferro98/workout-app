@@ -19,13 +19,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async function init() {
             try {
                 let token = localStorage.getItem('token')
-                if (!token) {
-                    await authService.login({ username: 'cliente@test.com', password: 'password123' })
+
+                if (token) {
+                    try {
+                        const me = await authService.getMe()
+                        setUser(me)
+                        return
+                    } catch (err) {
+                        console.warn('[Auth] Il token in memoria è scaduto o non valido. Procedo al re-login...')
+                        localStorage.removeItem('token')
+                    }
                 }
+
+                await authService.login({ username: 'cliente@test.com', password: 'password123' })
+
                 const me = await authService.getMe()
                 setUser(me)
             } catch (e) {
-                console.error(e)
+                console.error('[Auth] Errore fatale durante l’autenticazione automatica:', e)
+                localStorage.removeItem('token')
+                setUser(null)
             } finally {
                 setLoading(false)
             }
