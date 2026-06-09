@@ -3,45 +3,46 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app import schemas
 
-from ..models import User, Program, ProgramDay, ProgramExercise, TargetSet
+from ..models import Exercise, User, Program, ProgramDay, ProgramExercise, TargetSet
 
 async def get_programs_for_client(db: AsyncSession, client_id: int):
     """Estrae tutte le schede di uno specifico cliente."""
     stmt = (
-            select(Program)
-            .where(Program.client_id == client_id)
-            .options(
-                selectinload(Program.days)
-                .selectinload(ProgramDay.exercises)
-                .selectinload(ProgramExercise.exercise),
-                
-                selectinload(Program.days)
-                .selectinload(ProgramDay.exercises)
-                .selectinload(ProgramExercise.target_sets)
-            )
+        select(Program)
+        .where(Program.client_id == client_id)
+        .options(
+            selectinload(Program.days)
+            .selectinload(ProgramDay.exercises)
+            .selectinload(ProgramExercise.exercise),
+            
+            selectinload(Program.days)
+            .selectinload(ProgramDay.exercises)
+            .selectinload(ProgramExercise.target_sets)
         )
+    )
     result = await db.execute(stmt)
     return result.scalars().all()
 
 async def get_active_program_for_client(db: AsyncSession, client_id: int):
     """Estrae la scheda attiva di uno specifico cliente."""
     stmt = (
-            select(Program)
-            .where(Program.client_id == client_id, Program.is_active == True)
-            .options(
-                selectinload(Program.days)
-                .selectinload(ProgramDay.exercises)
-                .selectinload(ProgramExercise.exercise),
-                
-                selectinload(Program.days)
-                .selectinload(ProgramDay.exercises)
-                .selectinload(ProgramExercise.target_sets)
-            )
+        select(Program)
+        .where(Program.client_id == client_id, Program.is_active == True)
+        .options(
+            selectinload(Program.days)
+            .selectinload(ProgramDay.exercises)
+            .selectinload(ProgramExercise.exercise),
+            
+            selectinload(Program.days)
+            .selectinload(ProgramDay.exercises)
+            .selectinload(ProgramExercise.target_sets)
         )
+    )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 async def get_program_by_id(db: AsyncSession, program_id: int):
+    """Estrae una singola scheda tramite ID completando l'albero relazionale."""
     stmt = (
         select(Program)
         .where(Program.id == program_id)
@@ -54,6 +55,7 @@ async def get_program_by_id(db: AsyncSession, program_id: int):
     return result.scalar_one_or_none()
 
 async def create_nested_program(db: AsyncSession, program_data: schemas.ProgramCreate, coach_id: int, client_id: int):
+    """Crea una nuova scheda da zero gestendo l'albero nidificato giorno -> esercizio -> set."""
     # 1. Disattiviamo le schede attive precedenti per il cliente
     await db.execute(
         update(Program)
@@ -81,9 +83,16 @@ async def create_nested_program(db: AsyncSession, program_data: schemas.ProgramC
         )
 
         for idx, ex_in in enumerate(day_in.exercises):
+            # --- FIX: Recuperiamo il TYPE dall'esercizio MASTER ---
+            ex_master_stmt = select(Exercise).where(Exercise.id == ex_in.exercise_id)
+            ex_master_res = await db.execute(ex_master_stmt)
+            ex_master = ex_master_res.scalar_one_or_none()
+            
+            exercise_type = ex_master.type if ex_master else "weight"
+
             db_exercise = ProgramExercise(
                 exercise_id=ex_in.exercise_id,
-                type=ex_in.type,
+                type=exercise_type, # Utilizziamo il tipo preso dal DB master
                 sort_order=ex_in.sort_order,
                 sets=ex_in.sets,
                 reps=ex_in.reps,
@@ -113,18 +122,13 @@ async def create_nested_program(db: AsyncSession, program_data: schemas.ProgramC
     db.add(db_program)
     await db.commit()
     
-    # 5. Facciamo una SELECT finale "ansiosa" (Eager) per caricare tutto l'albero
+    # 5. Facciamo una SELECT finale Eager per caricare tutto l'albero
     stmt = (
         select(Program)
         .where(Program.id == db_program.id)
         .options(
-            selectinload(Program.days)
-            .selectinload(ProgramDay.exercises)
-            .selectinload(ProgramExercise.exercise), # Serve per name e type nello schema
-            
-            selectinload(Program.days)
-            .selectinload(ProgramDay.exercises)
-            .selectinload(ProgramExercise.target_sets) # Serve per le serie target
+            selectinload(Program.days).selectinload(ProgramDay.exercises).selectinload(ProgramExercise.exercise),
+            selectinload(Program.days).selectinload(ProgramDay.exercises).selectinload(ProgramExercise.target_sets)
         )
     )
     
@@ -132,11 +136,11 @@ async def create_nested_program(db: AsyncSession, program_data: schemas.ProgramC
     return result.scalar_one()
 
 async def update_program_metadata(db: AsyncSession, program_id: int, program_in: schemas.ProgramUpdate):
+    """Aggiorna solo i metadati superficiali della scheda (nome, note, stato)."""
     # 1. Prepariamo il dizionario con i soli campi inviati dal frontend
     update_data = program_in.model_dump(exclude_unset=True)
     
     if not update_data:
-        # Se il frontend ha inviato un body vuoto {}, recuperiamo solo la scheda attuale
         stmt = select(Program).where(Program.id == program_id)
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -146,7 +150,7 @@ async def update_program_metadata(db: AsyncSession, program_id: int, program_in:
         update(Program)
         .where(Program.id == program_id)
         .values(**update_data)
-        .returning(Program) # Ci facciamo restituire l'oggetto aggiornato (funziona su Postgres/Supabase)
+        .returning(Program)
     )
     
     result = await db.execute(stmt)
@@ -159,13 +163,14 @@ async def create_program_version(
     program_data: schemas.ProgramCreate, 
     coach_id: int
 ):
+    """Genera una nuova versione incrementale (v+1) disattivando la precedente."""
     # 1. Recuperiamo la scheda "genitore" per verificare che esista e prendere il client_id
     parent_stmt = select(Program).where(Program.id == parent_program_id)
     parent_result = await db.execute(parent_stmt)
     parent_program = parent_result.scalar_one_or_none()
     
     if not parent_program:
-        return None # Gestito poi dall'endpoint con un 404
+        return None 
 
     # 2. Disattiviamo la vecchia scheda (e qualsiasi altra scheda attiva per sicurezza)
     await db.execute(
@@ -179,13 +184,13 @@ async def create_program_version(
         name=program_data.name,
         coach_note=program_data.coach_note,
         coach_id=coach_id,
-        client_id=parent_program.client_id, # Ereditato dal genitore
-        is_active=True,                    # Diventa la scheda corrente
-        parent_id=parent_program.id,        # Collegamento storico
-        version=parent_program.version + 1  # Incrementiamo la versione (v2, v3...)
+        client_id=parent_program.client_id, 
+        is_active=True,                    
+        parent_id=parent_program.id,        
+        version=parent_program.version + 1  
     )
 
-    # 4. Ricostruiamo l'albero dei nuovi giorni/esercizi inviati dal frontend
+    # 4. Ricostruiamo l'albero dei nuovi giorni/esercizi
     for day_in in program_data.days:
         db_day = ProgramDay(
             day_index=day_in.day_index,
@@ -195,9 +200,16 @@ async def create_program_version(
         )
         
         for ex_in in day_in.exercises:
+            # --- FIX: Recuperiamo il TYPE dall'esercizio MASTER ---
+            ex_master_stmt = select(Exercise).where(Exercise.id == ex_in.exercise_id)
+            ex_master_res = await db.execute(ex_master_stmt)
+            ex_master = ex_master_res.scalar_one_or_none()
+            
+            exercise_type = ex_master.type if ex_master else "weight" 
+
             db_exercise = ProgramExercise(
                 exercise_id=ex_in.exercise_id,
-                type=ex_in.type,
+                type=exercise_type, 
                 sort_order=ex_in.sort_order,
                 sets=ex_in.sets,
                 reps=ex_in.reps,
@@ -223,12 +235,11 @@ async def create_program_version(
         
         db_new_program.days.append(db_day)
 
-    # 5. Salva tutto a cascata nel database
+    # 5. Salva tutto a cascata
     db.add(db_new_program)
     await db.commit()
     
-    # 6. Ricarichiamo l'albero completo (Eager Load) per evitare il MissingGreenletError in risposta
-    from sqlalchemy.orm import selectinload
+    # 6. Ricarichiamo l'albero completo per la risposta
     stmt = (
         select(Program)
         .where(Program.id == db_new_program.id)
@@ -241,7 +252,8 @@ async def create_program_version(
     return result.scalar_one()
 
 async def delete_program(db: AsyncSession, program_id: int):
+    """Elimina una scheda dal database tramite ID."""
     stmt = delete(Program).where(Program.id == program_id)
     result = await db.execute(stmt)
     await db.commit()
-    return result.rowcount > 0 # Restituisce True se ha eliminato qualcosa
+    return result.rowcount > 0

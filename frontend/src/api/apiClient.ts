@@ -61,8 +61,8 @@ export const apiClient = {
   post: (endpoint: string, body: any, options?: RequestInit) => 
     customFetch(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
     
-  put: (endpoint: string, body: any, options?: RequestInit) => 
-    customFetch(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+  patch: (endpoint: string, body: any, options?: RequestInit) => 
+    customFetch(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
     
   delete: (endpoint: string, options?: RequestInit) => 
     customFetch(endpoint, { ...options, method: 'DELETE' }),

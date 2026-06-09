@@ -62,6 +62,21 @@ async def get_client_active_program(
     
     return program
 
+@router.get("/{client_id}/programs", response_model=List[schemas.ProgramOut])
+async def get_client_programs(
+    client_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    programs = await crud_programs.get_programs_for_client(db=db, client_id=client_id)
+    if not programs:
+        raise HTTPException(status_code=404, detail="Nessuna scheda attiva trovata per questo cliente")
+    
+    if current_user.role == "client" and current_user.id != client_id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
+    
+    return programs
+
 @router.get("/{program_id}", response_model=schemas.ProgramOut)
 async def get_program(
     program_id: int,

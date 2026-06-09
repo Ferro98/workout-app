@@ -205,11 +205,26 @@ export interface SessionCreate {
 
 export interface Client {
   id: number
-  name: string
+  fullName: string
   initials: string
   colorBg: string | null
   colorText: string | null
   activeProgramName: string | null
   lastSessionDate: string | null
   isActive: boolean
+}
+
+export interface ClientOut {
+  id: number;
+  email: string;
+  name: string;
+  role: 'client' | 'coach';
+  coachId: number | null;
+  colorBg: string | null;
+  colorText: string | null;
+  isActive: boolean;
+  createdAt: string;
+  // Campi calcolati/aggregati tramite JOIN o property nel backend
+  activeProgramName?: string | null;
+  lastSessionDate?: string | null;
 }

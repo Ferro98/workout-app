@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
                 }
 
-                await authService.login({ username: 'cliente@test.com', password: 'password123' })
+                await authService.login({ username: 'coach@test.com', password: 'password123' })
 
                 const me = await authService.getMe()
                 setUser(me)
