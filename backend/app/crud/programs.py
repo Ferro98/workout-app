@@ -251,9 +251,25 @@ async def create_program_version(
     result = await db.execute(stmt)
     return result.scalar_one()
 
-async def delete_program(db: AsyncSession, program_id: int):
-    """Elimina una scheda dal database tramite ID."""
-    stmt = delete(Program).where(Program.id == program_id)
+async def delete_program(db: AsyncSession, program_id: int, coach_id: int):
+    """Elimina una scheda dal database tramite ID, verificando che appartenga al coach."""
+    stmt = delete(Program).where(Program.id == program_id, Program.coach_id == coach_id)
     result = await db.execute(stmt)
     await db.commit()
     return result.rowcount > 0
+
+async def get_previous_program(db: AsyncSession, program: Program):
+    """Restituisce la scheda padre di quella passata, o None se è la prima versione."""
+    if not Program.parent_id:
+        return None
+    
+    stmt = (
+        select(Program)
+        .where(Program.id == program.parent_id)
+        .options(
+            selectinload(Program.days).selectinload(ProgramDay.exercises).selectinload(ProgramExercise.exercise),
+            selectinload(Program.days).selectinload(ProgramDay.exercises).selectinload(ProgramExercise.target_sets)
+        )
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()

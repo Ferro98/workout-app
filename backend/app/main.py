@@ -23,7 +23,6 @@ app.add_middleware(
 # Collega tutte le rotte!
 # Tutte avranno il prefisso /api (es. /api/clients, /api/exercises)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(auth.router, prefix="/users", tags=["users"])
 app.include_router(clients.router, prefix="/api")
 # app.include_router(exercises.router, prefix="/api")
 app.include_router(programs.router, prefix="/api")

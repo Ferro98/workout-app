@@ -263,3 +263,16 @@ class ClientOut(BaseSchema):
         return "".join([p[0].upper() for p in parts if p])[:2]
     
 # endregion
+
+# region --- USER SCHEMA ---
+
+class UserOut(BaseSchema):
+    id: int
+    email: str
+    full_name: str
+    role: str
+    coach_id: Optional[int]
+    color_bg: Optional[str]
+    color_text: Optional[str]
+
+# end region

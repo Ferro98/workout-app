@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
 
+from backend.app.schemas import BaseSchema, UserOut
+
 from ..db import get_db
 from ..models import User
 from ..auth import get_current_user, hash_password, verify_password, create_token
@@ -11,7 +13,7 @@ from ..auth import get_current_user, hash_password, verify_password, create_toke
 router = APIRouter()
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequest(BaseSchema):
     email: EmailStr
     password: str
     full_name: str
@@ -77,14 +79,14 @@ async def login(
         full_name=user.full_name,
     )
 
-@router.get("/me")
+@router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user)):
-    return {
-        "id": user.id,
-        "email": user.email,
-        "full_name": user.full_name,
-        "role": user.role,
-        "coach_id": user.coach_id,
-        "color_bg": user.color_bg,
-        "color_text": user.color_text,
-    }
+    return UserOut(
+        id = user.id,
+        email = user.email,
+        full_name = user.full_name,
+        role = user.role,
+        coach_id = user.coach_id,
+        color_bg = user.color_bg,
+        color_text = user.color_text,
+    )

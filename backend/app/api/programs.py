@@ -33,16 +33,10 @@ async def get_my_active_program(
     if not program_orm:
         raise HTTPException(status_code=404, detail="Nessuna scheda attiva trovata")
 
-    # 2. Converti l'oggetto ORM nel modello Pydantic 
-    # (Questo usa `from_attributes=True` che hai in BaseSchema)
-    program_out = schemas.ProgramOut.model_validate(program_orm)
-
-    # 3. Arricchisci l'oggetto Pydantic con i calcoli del Diff e dello Storico
-    # (Passiamo sia il DB che l'oggetto Pydantic da manipolare)
     enriched_program = await diff_service.enrich_program_with_diffs(
-        db=db, 
-        client_id=current_user.id, 
-        program=program_out
+        db=db,
+        client_id=current_user.id,
+        program_orm=program_orm,
     )
 
     return enriched_program
@@ -53,12 +47,16 @@ async def get_client_active_program(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role == "client" and current_user.id != client_id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
+    if current_user.role == "coach":
+        client = await db.get(User, client_id)
+        if not client or client.coach_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Questo cliente non appartiene a te")
+    
     program = await crud_programs.get_active_program_for_client(db=db, client_id=client_id)
     if not program:
         raise HTTPException(status_code=404, detail="Nessuna scheda attiva trovata per questo cliente")
-    
-    if current_user.role == "client" and current_user.id != client_id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
     
     return program
 
@@ -68,20 +66,28 @@ async def get_client_programs(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role == "client" and current_user.id != client_id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
+    
+    if current_user.role == "coach":
+        client = await db.get(User, client_id)
+        if not client or client.coach_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Questo cliente non appartiene a te")
+
     programs = await crud_programs.get_programs_for_client(db=db, client_id=client_id)
     if not programs:
         raise HTTPException(status_code=404, detail="Nessuna scheda attiva trovata per questo cliente")
-    
-    if current_user.role == "client" and current_user.id != client_id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
     
     return programs
 
 @router.get("/{program_id}", response_model=schemas.ProgramOut)
 async def get_program(
     program_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    if current_user.id != program.client_id or current_user.id != program.coach_id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
     program = await crud_programs.get_program_by_id(db=db, program_id=program_id)
     if not program:
         raise HTTPException(status_code=404, detail="Scheda non trovata")

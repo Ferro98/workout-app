@@ -1,5 +1,5 @@
 // src/api/sessionService.ts
-import { apiClient } from './apiClient';
+import { apiClient } from "./apiClient";
 
 // Opzionale: definisci le interfacce TS per avere l'autocompletamento perfetto
 export interface SessionSetIn {
@@ -19,9 +19,9 @@ export interface SessionExerciseIn {
 
 export interface SessionCreatePayload {
   programId: number;
-  programDayId: number;
-  date: string; // ISO string della data di inizio
-  ended_at?: string | null;
+  dayId: number;
+  startedAt: string; // ISO string della data di inizio
+  endedAt?: string | null;
   durationSeconds?: number | null;
   generalNote?: string | null;
   exercises: SessionExerciseIn[];
@@ -30,13 +30,11 @@ export interface SessionCreatePayload {
 export const sessionService = {
   // Invia la sessione conclusa al backend
   createSession: async (clientId: number, payload: SessionCreatePayload) => {
-    const response = await apiClient.post(`/clients/${clientId}/sessions`, payload);
-    return response.data; // Restituisce direttamente i dati già parsati dal JSON
+    return await apiClient.post(`/api/clients/${clientId}/sessions`, payload);
   },
 
   // Esempio di altra chiamata utile per il futuro:
   getHistoryByClient: async (clientId: number) => {
-    const response = await apiClient.get(`/clients/${clientId}/sessions`);
-    return response.data;
-  }
+    return await apiClient.get(`/api/clients/${clientId}/sessions`);
+  },
 };
