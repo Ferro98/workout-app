@@ -47,12 +47,15 @@ async def get_client_active_program(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role == "client" and current_user.id != client_id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
-    if current_user.role == "coach":
+    if current_user.role == "client":
+        if current_user.id != client_id:
+            raise HTTPException(status_code=404, detail="Cliente non trovato")
+    elif current_user.role == "coach":
         client = await db.get(User, client_id)
         if not client or client.coach_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Questo cliente non appartiene a te")
+            raise HTTPException(status_code=403, detail="Questo cliente non ti appartiene o non esiste")
+    else:
+        raise HTTPException(status_code=403, detail="Ruolo non autorizzato")
     
     program = await crud_programs.get_active_program_for_client(db=db, client_id=client_id)
     if not program:
@@ -66,17 +69,17 @@ async def get_client_programs(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role == "client" and current_user.id != client_id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
-    
-    if current_user.role == "coach":
+    if current_user.role == "client":
+        if current_user.id != client_id:
+            raise HTTPException(status_code=404, detail="Cliente non trovato")
+    elif current_user.role == "coach":
         client = await db.get(User, client_id)
         if not client or client.coach_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Questo cliente non appartiene a te")
+            raise HTTPException(status_code=403, detail="Questo cliente non ti appartiene o non esiste")
+    else:
+        raise HTTPException(status_code=403, detail="Ruolo non autorizzato")
 
     programs = await crud_programs.get_programs_for_client(db=db, client_id=client_id)
-    if not programs:
-        raise HTTPException(status_code=404, detail="Nessuna scheda attiva trovata per questo cliente")
     
     return programs
 
@@ -86,9 +89,9 @@ async def get_program(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    program = await crud_programs.get_program_by_id(db=db, program_id=program_id)
     if current_user.id != program.client_id or current_user.id != program.coach_id:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questa scheda")
-    program = await crud_programs.get_program_by_id(db=db, program_id=program_id)
     if not program:
         raise HTTPException(status_code=404, detail="Scheda non trovata")
     return program
@@ -100,6 +103,14 @@ async def create_client_program(
     db: AsyncSession = Depends(get_db),
     coach: User = Depends(require_coach)
 ):
+    client = await db.get(User, client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    if client.coach_id != coach.id:
+        raise HTTPException(status_code=403, detail="Questo cliente non ti appartiene")
+    if not client.is_active:
+        raise HTTPException(status_code=400, detail="Impossibile creare programmi per un cliente disattivato")
+    
     # Passiamo il client_id preso dall'URL direttamente al CRUD
     new_program = await crud_programs.create_nested_program(
         db=db, 
@@ -151,6 +162,10 @@ async def create_new_program_version(
     # 2. Controllo di proprietà: questa scheda appartiene al coach loggato?
     if old_program.coach_id != coach.id:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questa scheda")
+    
+    client = await db.get(User, old_program.client_id)
+    if client and not client.is_active:
+        raise HTTPException(status_code=400, detail="Impossibile aggiornare la scheda di un cliente disattivato")
 
     # 3. Generiamo la nuova versione
     updated_program = await crud_programs.create_program_version(
@@ -180,6 +195,12 @@ async def delete_client_program(
         raise HTTPException(
             status_code=403, 
             detail="Azione negata: non puoi eliminare una scheda creata da un altro coach"
+        )
+    
+    if program.is_active:
+        raise HTTPException(
+            status_code=400, 
+            detail="Non puoi eliminare la scheda attualmente attiva sul telefono del cliente. Impostane prima un'altra come attiva."
         )
 
     await crud_programs.delete_program(db=db, program_id=program_id, coach_id=coach.id)
