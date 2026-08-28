@@ -1,9 +1,9 @@
 # GymCoach
 
-App mobile-first per la gestione delle schede di allenamento tra **coach** e **cliente**.
-Il coach crea e versiona le schede, il cliente le esegue in palestra loggando le serie svolte e vede lo storico dei pesi/performance nel tempo.
+Mobile-first app for managing workout programs between a **coach** and a **client**.
+The coach creates and versions programs, the client executes them at the gym logging completed sets, and sees a history of weights/performance over time.
 
-Monorepo con due progetti indipendenti:
+Monorepo with two independent projects:
 
 ```
 .
@@ -11,46 +11,46 @@ Monorepo con due progetti indipendenti:
 └── frontend/   React + TypeScript + Vite (PWA)
 ```
 
-> Questo README descrive lo **stato reale** del codice in questo repository, non un piano. La sezione [Stato del progetto](#stato-del-progetto) e [Prossimi passi](#prossimi-passi) sono la fonte di verità più aggiornata su cosa funziona e cosa manca.
+> This README describes the **actual state** of the code in this repository, not a plan. The [Known Issues](#known-issues) and [Next Steps](#next-steps) sections are the most up-to-date source of truth on what works and what's missing.
 
 ---
 
-## Stack tecnico
+## Tech Stack
 
-| Layer        | Tecnologia                            | Note                                                  |
-| ------------ | ------------------------------------- | ----------------------------------------------------- |
-| Frontend     | React 19 + TypeScript + Vite          | PWA (`vite-plugin-pwa`), installabile su mobile       |
-| Stili        | Tailwind CSS v4                       | Dark mode via `prefers-color-scheme`                  |
-| Routing      | React Router v6                       | Route separate per ruolo (`client` / `coach`)         |
-| Icone        | `@tabler/icons-react`, `lucide-react` | —                                                     |
-| Backend      | FastAPI (async)                       | REST + JWT auth                                       |
-| ORM          | SQLAlchemy 2.0 async                  | `AsyncSession`, `Mapped[...]`, `selectinload`         |
-| Migrazioni   | Alembic                               | Migrazioni versionate in `backend/alembic/versions`   |
-| Database     | PostgreSQL (Supabase in dev)          | `backend/ping_supabase.py` per evitare l'auto-pausa   |
-| Auth         | `python-jose` + `bcrypt`              | JWT con `sub`/`role`/`exp`, OAuth2 password flow      |
-| Package mgmt | `uv` (backend) · `npm` (frontend)     | Vedi `backend/uv.lock` / `frontend/package-lock.json` |
+| Layer        | Technology                            | Notes                                                  |
+| ------------ | -------------------------------------- | ------------------------------------------------------ |
+| Frontend     | React 19 + TypeScript + Vite          | PWA (`vite-plugin-pwa`), installable on mobile          |
+| Styling      | Tailwind CSS v4                       | Dark mode via `prefers-color-scheme`                    |
+| Routing      | React Router v6                       | Separate routes per role (`client` / `coach`)            |
+| Icons        | `@tabler/icons-react`, `lucide-react` | —                                                        |
+| Backend      | FastAPI (async)                       | REST + JWT auth                                          |
+| ORM          | SQLAlchemy 2.0 async                  | `AsyncSession`, `Mapped[...]`, `selectinload`            |
+| Migrations   | Alembic                               | Versioned migrations in `backend/alembic/versions`       |
+| Database     | PostgreSQL (Supabase in dev)          | `backend/ping_supabase.py` to prevent auto-pause         |
+| Auth         | `python-jose` + `bcrypt`              | JWT with `sub`/`role`/`exp`, OAuth2 password flow         |
+| Package mgmt | `uv` (backend) · `npm` (frontend)     | See `backend/uv.lock` / `frontend/package-lock.json`      |
 
 ---
 
-## Stato del progetto
+## Project Status
 
-Legenda: ✅ funzionante e collegato end-to-end · 🟡 implementato parzialmente / con bug noti · ⬜ non ancora implementato
+Legend: ✅ working and connected end-to-end · 🟡 partially implemented / with known bugs · ⬜ not implemented yet
 
-| Funzionalità                                  | Backend | Frontend | Note                                                                                                                                                                                                                                           |
-| --------------------------------------------- | :-----: | :------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Registrazione / Login (JWT)                   |    ✅    |    🟡     | Backend ok. Il frontend fa **auto-login con credenziali hardcoded** (`coach@test.com`) invece di una vera pagina di login — vedi [Problemi noti](#problemi-noti).                                                                              |
-| Profilo utente (`/auth/me`)                   |    ✅    |    🟡     | Il backend torna già camelCase (`fullName`), ma il tipo TS `UserMe` dichiara ancora `name` → il nome utente risulta `undefined` a runtime.                                                                                                     |
-| Lista clienti (coach)                         |    ✅    |    ✅     | `ClientiPage` collegata a `GET /api/clients/`.                                                                                                                                                                                                 |
-| Scheda attiva (cliente)                       |    ✅    |    ✅     | `SchedaPage` collegata a `GET /api/programs/active`.                                                                                                                                                                                           |
-| Editor scheda / nuova versione (coach)        |    ✅    |    ✅     | `EditorPage` + `SchemaEditor`, invio albero completo giorni→esercizi→set.                                                                                                                                                                      |
-| Diff tra versioni scheda                      |    ✅    |    ✅     | `diff.py` calcola il confronto, `diff_service.py` lo inietta in `GET /api/programs/active`; `DiffBadge`/`ExerciseCard` lo mostrano già.                                                                                                        |
-| Storico pesi per esercizio                    |    ✅    |    ✅     | Popolato da `crud/sessions.py` in `ExerciseHistory`, esposto via diff_service.                                                                                                                                                                 |
-| Esecuzione allenamento (timer, set, recupero) |    —    |    ✅     | `WorkoutPage` + `WorkoutContext`, UI completa e funzionante localmente.                                                                                                                                                                        |
-| **Salvataggio sessione allenamento**          |    ✅    |    🟡     | L'endpoint `POST /api/clients/{id}/sessions` e `sessionService.createSession` sono corretti e allineati, **ma nessuna pagina li chiama ancora**: `WorkoutPage.finish()` non invia la sessione al backend. È il gap più importante da chiudere. |
-| Pagina Storico allenamenti (cliente)          |    —    |    ⬜     | `StoricoPage.tsx` è vuota, route mostra un placeholder.                                                                                                                                                                                        |
-| Pagina Note coach                             |    —    |    ⬜     | `NotePage.tsx` è vuota, route mostra un placeholder.                                                                                                                                                                                           |
-| CRUD esercizi (catalogo)                      |    ⬜    |    🟡     | Router `exercises.py` esiste ma è **disattivato** in `main.py` ed espone solo un endpoint dummy. `EserciziPage` funziona ma legge da un array mock (`data/mock.ts`), non dal DB.                                                               |
-| Ownership coach → cliente                     |    ✅    |    ✅     | Verificata su tutti gli endpoint principali (vedi fix elencati sotto).                                                                                                                                                                         |
+| Feature                                       | Backend | Frontend | Notes                                                                                                                                                                                                                              |
+| ---------------------------------------------- | :-----: | :------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Registration / Login (JWT)                    |    ✅    |    🟡     | Backend works. The frontend **auto-logs in with hardcoded credentials** (`coach@test.com`) instead of a real login page — see [Known Issues](#known-issues).                                                                    |
+| User profile (`/auth/me`)                     |    ✅    |    🟡     | The backend already returns camelCase (`fullName`), but the `UserMe` TS type still declares `name` → the username shows up as `undefined` at runtime.                                                                            |
+| Client list (coach)                           |    ✅    |    ✅     | `ClientiPage` wired to `GET /api/clients/`.                                                                                                                                                                                        |
+| Active program (client)                       |    ✅    |    ✅     | `SchedaPage` wired to `GET /api/programs/active`.                                                                                                                                                                                  |
+| Program editor / new version (coach)          |    ✅    |    ✅     | `EditorPage` + `SchemaEditor`, sends the full day → exercise → set tree.                                                                                                                                                          |
+| Diff between program versions                 |    ✅    |    ✅     | `diff.py` computes the comparison, `diff_service.py` injects it into `GET /api/programs/active`; `DiffBadge`/`ExerciseCard` already display it.                                                                                  |
+| Weight history per exercise                   |    ✅    |    ✅     | Populated by `crud/sessions.py` into `ExerciseHistory`, exposed via `diff_service`.                                                                                                                                                |
+| Workout execution (timer, sets, rest)         |    —    |    ✅     | `WorkoutPage` + `WorkoutContext`, UI complete and working locally.                                                                                                                                                                 |
+| **Saving a workout session**                  |    ✅    |    🟡     | The `POST /api/clients/{id}/sessions` endpoint and `sessionService.createSession` are correct and aligned, **but no page calls them yet**: `WorkoutPage.finish()` doesn't send the session to the backend. This is the most important gap to close. |
+| Workout history page (client)                 |    —    |    ⬜     | `StoricoPage.tsx` is empty, the route shows a placeholder.                                                                                                                                                                         |
+| Coach notes page                              |    —    |    ⬜     | `NotePage.tsx` is empty, the route shows a placeholder.                                                                                                                                                                            |
+| Exercise CRUD (catalog)                       |    ⬜    |    🟡     | The `exercises.py` router exists but is **disabled** in `main.py` and only exposes a dummy endpoint. `EserciziPage` works but reads from a mock array (`data/mock.ts`), not from the DB.                                          |
+| Coach → client ownership                      |    ✅    |    ✅     | Verified on all main endpoints (see fixes listed below).                                                                                                                                                                           |
 
 ---
 
@@ -58,35 +58,35 @@ Legenda: ✅ funzionante e collegato end-to-end · 🟡 implementato parzialment
 
 ### Backend
 
-Richiede Python ≥ 3.11 e [uv](https://docs.astral.sh/uv/).
+Requires Python ≥ 3.11 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 cd backend
-cp .env.example .env      # poi compila i valori, vedi tabella sotto
+cp .env.example .env      # then fill in the values, see table below
 uv sync
 uv run alembic upgrade head
-uv run python -m app.seed   # crea coach@test.com / password123 + dati demo
+uv run python -m app.seed   # creates coach@test.com / password123 + demo data
 uv run fastapi dev app/main.py
 ```
 
-L'API è disponibile su `http://localhost:8000`, Swagger su `http://localhost:8000/docs`.
+The API is available at `http://localhost:8000`, Swagger at `http://localhost:8000/docs`.
 
-#### Variabili d'ambiente (`backend/.env`)
+#### Environment variables (`backend/.env`)
 
-| Variabile                     | Obbligatoria | Descrizione                                                                                                                                          |
-| ----------------------------- | :----------: | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                |      ✅       | Connection string async, es. `postgresql+asyncpg://user:pass@host:5432/dbname`                                                                       |
-| `DATABASE_PASS`               |      —       | Password del database, tenuta separata per comodità/rotazione; **non ancora letta dal codice**, che si aspetta la password già dentro `DATABASE_URL` |
-| `SECRET_KEY`                  |      ✅       | Chiave per firmare i JWT (`app/auth.py`, va in errore all'avvio se assente)                                                                          |
-| `ALGORITHM`                   |      ✅       | Algoritmo JWT, es. `HS256`                                                                                                                           |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` |      ✅       | Durata del token in minuti                                                                                                                           |
-| `TEST_DATABASE_URL`           |      —       | Riservata per una futura suite di test contro un DB separato; **non ancora usata** dal codice                                                        |
+| Variable                      | Required | Description                                                                                                                          |
+| ------------------------------ | :------: | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                 |    ✅    | Async connection string, e.g. `postgresql+asyncpg://user:pass@host:5432/dbname`                                                       |
+| `DATABASE_PASS`                |    —    | Database password, kept separate for convenience/rotation; **not yet read by the code**, which expects the password already inside `DATABASE_URL` |
+| `SECRET_KEY`                   |    ✅    | Key used to sign JWTs (`app/auth.py`, fails at startup if missing)                                                                     |
+| `ALGORITHM`                    |    ✅    | JWT algorithm, e.g. `HS256`                                                                                                            |
+| `ACCESS_TOKEN_EXPIRE_MINUTES`  |    ✅    | Token lifetime in minutes                                                                                                              |
+| `TEST_DATABASE_URL`            |    —    | Reserved for a future test suite against a separate DB; **not yet used** by the code                                                    |
 
-Vedi `backend/.env.example`.
+See `backend/.env.example`.
 
 ### Frontend
 
-Richiede Node ≥ 18.
+Requires Node ≥ 18.
 
 ```bash
 cd frontend
@@ -94,51 +94,72 @@ npm install
 npm run dev
 ```
 
-L'app gira su `http://localhost:5173` e si aspetta il backend su `http://localhost:8000` (hardcoded in `apiClient.ts` e `authService.ts` — vedi [Problemi noti](#problemi-noti)).
+The app runs on `http://localhost:5173` and expects the backend on `http://localhost:8000` (hardcoded in `apiClient.ts` and `authService.ts` — see [Known Issues](#known-issues)).
 
 ---
 
-## Architettura backend
+## Backend Architecture
 
 ```
 backend/app/
-├── main.py            # crea la FastAPI app, monta i router, CORS
-├── db.py              # engine async + Base dichiarativa (usata anche da Alembic)
-├── auth.py             # JWT encode/decode, dependency get_current_user / require_coach / require_client
-├── models.py           # modelli SQLAlchemy (User, Program, ProgramDay, ProgramExercise, TargetSet, Session, SessionSet, ExerciseHistory, ...)
-├── schemas.py           # schemi Pydantic v2, BaseSchema con alias camelCase automatico
-├── enums.py             # StrEnum condivisi (ExerciseType, ExerciseCategory, DiffStatus)
-├── diff.py              # logica pura di confronto tra due versioni di scheda
-├── seed.py              # popola coach + cliente demo + esercizi + scheda
-├── api/                 # router FastAPI (auth, clients, exercises, programs, sessions)
-└── crud/                 # accesso al DB per ciascun dominio + diff_service (orchestratore diff/storico)
+├── main.py            # creates the FastAPI app, mounts routers, CORS
+├── db.py              # async engine + declarative Base (also used by Alembic)
+├── auth.py             # JWT encode/decode, get_current_user / require_coach / require_client dependencies
+├── models.py           # SQLAlchemy models (User, Program, ProgramDay, ProgramExercise, TargetSet, Session, SessionSet, ExerciseHistory, ...)
+├── schemas.py           # Pydantic v2 schemas, BaseSchema with automatic camelCase alias
+├── enums.py             # shared StrEnums (ExerciseType, ExerciseCategory, DiffStatus)
+├── diff.py              # pure logic for comparing two program versions
+├── seed.py              # seeds a demo coach + client + exercises + program
+├── api/                 # FastAPI routers (auth, clients, exercises, programs, sessions)
+└── crud/                 # DB access per domain + diff_service (diff/history orchestrator)
 ```
 
-Il modello di dominio: un coach crea `Program` versionati (`version`, `parent_id`) per i propri clienti (`User.coach_id`); ogni `Program` ha `ProgramDay` → `ProgramExercise` → `TargetSet`. Il cliente esegue una scheda producendo `Session` → `SessionSet`, che a fine sessione vengono aggregati in `ExerciseHistory` (cache di lettura per lo storico pesi).
+Domain model: a coach creates versioned `Program`s (`version`, `parent_id`) for their clients (`User.coach_id`); each `Program` has `ProgramDay` → `ProgramExercise` → `TargetSet`. The client executes a program, producing `Session` → `SessionSet`, which get aggregated at the end of the session into `ExerciseHistory` (a read cache for weight history).
 
-## Architettura frontend
+## Frontend Architecture
 
 ```
 frontend/src/
-├── api/            # apiClient (wrapper fetch) + un service per dominio (auth, client, program, session)
-├── context/        # AuthContext (utente/token), WorkoutContext (stato di un allenamento in corso)
-├── components/     # layout (TopBar, TabBar) + componenti scheda (ExerciseCard, DiffBadge, CoachNoteBanner)
+├── api/            # apiClient (fetch wrapper) + one service per domain (auth, client, program, session)
+├── context/        # AuthContext (user/token), WorkoutContext (state of an in-progress workout)
+├── components/     # layout (TopBar, TabBar) + program components (ExerciseCard, DiffBadge, CoachNoteBanner)
 ├── pages/
-│   ├── client/     # SchedaPage, WorkoutPage, EserciziPage, StoricoPage (vuota)
-│   └── coach/      # ClientiPage, EditorPage, SchemaEditor, NotePage (vuota)
-└── types/          # tipi TS che rispecchiano gli schemi Pydantic
+│   ├── client/     # SchedaPage, WorkoutPage, EserciziPage, StoricoPage (empty)
+│   └── coach/      # ClientiPage, EditorPage, SchemaEditor, NotePage (empty)
+└── types/          # TS types mirroring the Pydantic schemas
 ```
 
-`apiClient.ts` centralizza header, token JWT e normalizzazione errori HTTP; ogni `*Service.ts` è un thin wrapper 1:1 sugli endpoint FastAPI.
+`apiClient.ts` centralizes headers, the JWT token, and HTTP error normalization; each `*Service.ts` is a thin 1:1 wrapper over the FastAPI endpoints.
 
 ---
 
-## Note su Alembic
+## Alembic Notes
 
-Le migrazioni vivono in `backend/alembic/versions`. Per generarne una nuova dopo aver modificato `app/models.py`:
+Migrations live in `backend/alembic/versions`. To generate a new one after changing `app/models.py`:
 
 ```bash
 cd backend
-uv run alembic revision --autogenerate -m "descrizione modifica"
+uv run alembic revision --autogenerate -m "change description"
 uv run alembic upgrade head
 ```
+
+---
+
+## Known Issues
+
+- **Workout sessions aren't persisted.** `WorkoutPage.finish()` never calls `sessionService.createSession`, even though the backend endpoint and the service function are both implemented and aligned. This is the single most important gap.
+- **No real login page.** The frontend auto-logs in with hardcoded demo credentials (`coach@test.com` / `password123`) instead of a login form — there's a working `/auth/login` endpoint on the backend, just no UI for it yet.
+- **`UserMe.name` vs. `fullName` mismatch.** The backend already serializes the user's name as `fullName` (camelCase), but the frontend's `UserMe` type still declares `name`, so the display name resolves to `undefined` at runtime.
+- **Exercise catalog isn't wired up.** The `exercises.py` router exists but is commented out in `main.py`; `EserciziPage` renders from a static mock array (`data/mock.ts`) instead of the database.
+- **Hardcoded API base URL.** `http://localhost:8000` is hardcoded in `apiClient.ts` and `authService.ts` instead of coming from an environment variable, so there's no easy way to point the frontend at a deployed backend yet.
+- **`DATABASE_PASS` is unused.** The env var is documented and read into the environment but never referenced by the code, which expects the password to already be embedded in `DATABASE_URL`.
+
+## Next Steps
+
+1. Wire `WorkoutPage.finish()` to `sessionService.createSession` so completed sessions actually persist.
+2. Build a real login page and remove the hardcoded auto-login.
+3. Fix the `UserMe` type to match the backend's camelCase `fullName`.
+4. Re-enable the `exercises.py` router and point `EserciziPage` at the real API instead of the mock data.
+5. Move the frontend's API base URL into an environment variable (`VITE_API_URL` or similar).
+6. Build out `StoricoPage` (workout history) and `NotePage` (coach notes) — both currently placeholders.
+7. Add a test suite against `TEST_DATABASE_URL`, which is already provisioned for but unused.
