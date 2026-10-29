@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,9 +8,13 @@ from app.api import clients, exercises, programs, sessions, auth
 
 app = FastAPI(title="Workout App API")
 
+# Lista separata da virgole, configurabile per ambiente (in prod: URL del frontend)
 origins = [
-    "http://localhost:5173",   
-    "http://127.0.0.1:5173", 
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if o.strip()
 ]
 
 # Configura i CORS per far comunicare il frontend (es. React/Vue) col backend

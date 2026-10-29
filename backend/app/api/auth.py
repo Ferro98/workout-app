@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
 
-from backend.app.schemas import BaseSchema, UserOut
+from app.schemas import BaseSchema, UserOut
 
 from ..db import get_db
 from ..models import User
