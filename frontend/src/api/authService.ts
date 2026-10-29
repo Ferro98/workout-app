@@ -4,7 +4,7 @@ import type {
   TokenResponse,
   UserMe,
 } from "../types";
-import { apiClient } from "./apiClient";
+import { apiClient, API_BASE_URL } from "./apiClient";
 
 export const authService = {
   /**
@@ -19,7 +19,7 @@ export const authService = {
 
     // Poiché apiClient imposta 'application/json' di default, qui usiamo fetch direttamente
     // per non sovrascrivere l'header necessario al FormData.
-    const response = await fetch("http://localhost:8000/auth/login", {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       body: formData,
       // Non settiamo il Content-Type, il browser lo imposterà in automatico a application/x-www-form-urlencoded

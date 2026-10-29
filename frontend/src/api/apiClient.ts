@@ -1,6 +1,7 @@
 // src/api/apiClient.ts
 
-const API_BASE_URL = 'http://localhost:8000'; // Sposta in un file .env in produzione
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 
 /**
  * Funzione base che wrappa la fetch nativa.

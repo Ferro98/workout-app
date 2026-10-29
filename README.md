@@ -1,4 +1,4 @@
-# GymCoach
+# WorkoutApp
 
 Mobile-first app for managing workout programs between a **coach** and a **client**.
 The coach creates and versions programs, the client executes them at the gym logging completed sets, and sees a history of weights/performance over time.
