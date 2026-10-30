@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   IconArrowLeft,
   IconPlus,
@@ -9,7 +9,6 @@ import {
   IconAlertCircle,
   IconSearch,
   IconX,
-  IconCheck,
   IconDeviceFloppy,
 } from "@tabler/icons-react";
 import { TopBar } from "../../components/layout/TopBar";
@@ -34,10 +33,15 @@ function emptyTargetSet(setIndex: number): TargetSet {
   return { setIndex, rpe: 8, reps: 8 };
 }
 
-function emptyExercise(exerciseId: number, name: string): ProgramExercise {
+function emptyExercise(
+  exerciseId: number,
+  name: string,
+  sortOrder: number,
+): ProgramExercise {
   return {
     id: tmpId(),
     exerciseId,
+    sortOrder,
     name,
     type: "weight",
     sets: 3,
@@ -600,7 +604,9 @@ function DayEditor({
   const deleteExercise = (i: number) => {
     onChange({
       ...day,
-      exercises: day.exercises.filter((_, idx) => idx !== i),
+      exercises: day.exercises
+        .filter((_, idx) => idx !== i)
+        .map((e, idx) => ({ ...e, sortOrder: idx })),
     });
   };
 
@@ -765,8 +771,8 @@ export function SchemaEditor({
 
   const handleExercisePicked = (exerciseId: number, name: string) => {
     if (pickerDayIdx === null) return;
-    const ex = emptyExercise(exerciseId, name);
     const day = draft.days[pickerDayIdx];
+    const ex = emptyExercise(exerciseId, name, day.exercises.length);
     updateDay(pickerDayIdx, { ...day, exercises: [...day.exercises, ex] });
     setPickerDayIdx(null);
   };
