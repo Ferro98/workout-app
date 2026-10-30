@@ -75,9 +75,9 @@ async def seed_exercises(db) -> dict:
             )
             db.add(ex_obj)
             await db.flush()
+            created += 1
+            print(f"➕ Creato: {ex['name']}")
         exercise_map[ex["name"]] = ex_obj
-        created += 1
-        print(f"➕ Creato: {ex["name"]}")
     print(f"📚 Catalogo esercizi: {created} creati, {len(CATALOG_EXERCISES) - created} già presenti (totale {len(CATALOG_EXERCISES)})")
     return exercise_map
 
