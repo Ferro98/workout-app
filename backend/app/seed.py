@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# I tuoi import nativi
 from app.db import AsyncSessionLocal
 from app.models import User, Exercise, Program, ProgramDay, ProgramExercise, TargetSet
 from app.auth import hash_password
@@ -42,9 +41,9 @@ CATALOG_EXERCISES: list[dict[str, str]] = [
 ]
 
 async def fix_postgres_sequences(db: AsyncSession):
-    """Ripristina i contatori degli ID se il DB contiene già dei dati"""
+    """Realign ID sequences if the DB already contains data"""
     tables = ["users", "exercises", "programs", "program_days", "program_exercises", "target_sets"]
-    print("🔄 Riallineamento dei contatori ID (Sequences) in corso...")
+    print("🔄 Realigning ID sequences...")
     for table in tables:
         try:
             await db.execute(text(f"""
@@ -55,13 +54,13 @@ async def fix_postgres_sequences(db: AsyncSession):
                 );
             """))
         except Exception:
-            # Se una tabella non ha una sequenza standard, passiamo oltre senza bloccare lo script
+            # Skip tables without a standard sequence instead of aborting
             pass
     await db.flush()
 
 async def seed_exercises(db: AsyncSession) -> dict[str, Exercise]:
-    """Inserts the exercises catalog inside the db and returns the map name -> object"""
-    print("📚 Controllo catalogo esercizi...")
+    """Insert missing catalog exercises and return a name -> Exercise map"""
+    print("📚 Checking exercise catalog...")
     names = [ex["name"] for ex in CATALOG_EXERCISES]
     res = await db.execute(select(Exercise).where(Exercise.name.in_(names)))
     existing = res.scalars().all()
@@ -78,26 +77,26 @@ async def seed_exercises(db: AsyncSession) -> dict[str, Exercise]:
             )
             new_exercises.append(ex_obj)
             exercise_map[ex["name"]] = ex_obj
-            print(f"➕ Creato: {ex['name']}")
+            print(f"➕ Created: {ex['name']}")
     if new_exercises:
         db.add_all(new_exercises)
         await db.flush()
-    created, existing_count = len(new_exercises), len(CATALOG_EXERCISES)
-    print(f"📚 Catalogo esercizi: {created} creati, {existing_count - created} già presenti (totale {existing_count})")
+    created, total = len(new_exercises), len(CATALOG_EXERCISES)
+    print(f"📚 Exercise catalog: {created} created, {total - created} already present (total {total})")
     return exercise_map
 
 
 async def seed_data():
-    print("🚀 Inizio popolamento database...")
+    print("🚀 Seeding database...")
     
     async with AsyncSessionLocal() as db:
-        # 0. Sistemiamo i contatori di Postgres prima di fare qualsiasi operazione
+        # 0. Realign Postgres sequences before any write
         await fix_postgres_sequences(db)
         
-        # Generiamo l'hash della tua password predefinita
+        # Hash the default demo password
         hashed_pwd = hash_password("password123")
         
-        # 1. Gestione del Coach (get_or_create)
+        # 1. Coach (get_or_create)
         result_coach = await db.execute(select(User).where(User.email == "coach@test.com"))
         coach = result_coach.scalar_one_or_none()
         
@@ -113,11 +112,11 @@ async def seed_data():
             )
             db.add(coach)
             await db.flush()
-            print(f"Coach creato con ID: {coach.id}")
+            print(f"Coach created with ID: {coach.id}")
         else:
-            print(f"Coach già presente (ID: {coach.id}), procedo...")
+            print(f"Coach already exists (ID: {coach.id}), continuing...")
 
-        # 2. Gestione del Cliente collegato (get_or_create)
+        # 2. Linked client (get_or_create)
         result_client = await db.execute(select(User).where(User.email == "cliente@test.com"))
         client = result_client.scalar_one_or_none()
         
@@ -134,14 +133,14 @@ async def seed_data():
             )
             db.add(client)
             await db.flush()
-            print(f"Cliente creato con ID: {client.id}")
+            print(f"Client created with ID: {client.id}")
         else:
-            print(f"Cliente già presente (ID: {client.id}), procedo...")
+            print(f"Client already exists (ID: {client.id}), continuing...")
 
-        # 3. Gestione Esercizi Master (Evitiamo duplicati sul nome)
+        # 3. Exercise catalog (idempotent, matched by name)
         exercise_map = await seed_exercises(db)
 
-        # 4. Creazione della nuova Scheda d'allenamento di test
+        # 4. New demo program
         timestamp = datetime.now().strftime("%d/%m %H:%M")
         program = Program(
             client_id=client.id,
@@ -154,7 +153,7 @@ async def seed_data():
         db.add(program)
         await db.flush()
 
-        # ── GIORNO A (Spinta) ──
+        # ── DAY A (Push) ──
         day_a = ProgramDay(
             program_id=program.id,
             day_index=0,
@@ -165,7 +164,7 @@ async def seed_data():
         db.add(day_a)
         await db.flush()
 
-        # Esercizio: Panca Piana
+        # Exercise: bench press
         ex_panca = exercise_map["Panca Piana Bilanciere"]
         pe_panca = ProgramExercise(
             day_id=day_a.id,
@@ -180,13 +179,13 @@ async def seed_data():
         db.add(pe_panca)
         await db.flush()
 
-        # Target Sets associati
+        # Associated target sets
         ts_p1 = TargetSet(program_exercise_id=pe_panca.id, set_index=0, rpe=8, reps=8, suggested_weight="80", tempo_per_rep="3-1-1-0")
         ts_p2 = TargetSet(program_exercise_id=pe_panca.id, set_index=1, rpe=8, reps=8, suggested_weight="80", tempo_per_rep="3-1-1-0")
         ts_p3 = TargetSet(program_exercise_id=pe_panca.id, set_index=2, rpe=9, reps=7, suggested_weight="82.5", tempo_per_rep="3-1-1-0", note="Mantenere tecnica pulita")
         db.add_all([ts_p1, ts_p2, ts_p3])
 
-        # ── GIORNO B (Trazione & Core) ──
+        # ── DAY B (Pull & Core) ──
         day_b = ProgramDay(
             program_id=program.id,
             day_index=1,
@@ -197,7 +196,7 @@ async def seed_data():
         db.add(day_b)
         await db.flush()
 
-        # Esercizio: Trazioni alla sbarra
+        # Exercise: pull-ups
         ex_traz = exercise_map["Trazioni alla Sbarra"]
         pe_traz = ProgramExercise(
             day_id=day_b.id,
@@ -216,7 +215,7 @@ async def seed_data():
         ts_t2 = TargetSet(program_exercise_id=pe_traz.id, set_index=1, rpe=8, reps=6)
         db.add_all([ts_t1, ts_t2])
 
-        # Esercizio: Plank (A Tempo)
+        # Exercise: plank (timed)
         ex_plank = exercise_map["Plank Addominale"]
         pe_plank = ProgramExercise(
             day_id=day_b.id,
@@ -234,13 +233,13 @@ async def seed_data():
         ts_pl1 = TargetSet(program_exercise_id=pe_plank.id, set_index=0, rpe=7, duration_sec=60)
         db.add(ts_pl1)
 
-        # Commit finale unico della transazione
+        # Single commit for the whole transaction
         await db.commit()
         
-        print("\n✅ Database popolato e sincronizzato con successo!")
-        print(f"📊 Creata nuova scheda: '{program.name}'")
-        print("📧 Email Coach: coach@test.com | 🔑 Pass: password123")
-        print("📧 Email Cliente: cliente@test.com | 🔑 Pass: password123")
+        print("\n✅ Database seeded successfully!")
+        print(f"📊 New program created: '{program.name}'")
+        print("📧 Coach email: coach@test.com | 🔑 Pass: password123")
+        print("📧 Client email: cliente@test.com | 🔑 Pass: password123")
 
 if __name__ == "__main__":
     asyncio.run(seed_data())
