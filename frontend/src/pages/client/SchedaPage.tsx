@@ -6,14 +6,12 @@ import { TopBar } from "../../components/layout/TopBar";
 import { CoachNoteBanner } from "../../components/scheda/CoachNoteBanner";
 import { ExerciseCard } from "../../components/scheda/ExerciseCard";
 import { programService } from "../../api/programService";
-import { useAuth } from "../../context/AuthContext";
 import type { Program } from "../../types";
 
 type Tab = "scheda" | "versioni";
 
 export default function SchedaPage() {
   // 1. PRIMA DI TUTTO GLI HOOK (Sempre in cima!)
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);

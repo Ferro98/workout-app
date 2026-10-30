@@ -3,7 +3,6 @@ import {
   IconChevronDown,
   IconTrendingUp,
   IconSparkles,
-  IconMinus,
   IconMessageCircle,
 } from "@tabler/icons-react";
 import type { ProgramExercise } from "../../types";
@@ -33,13 +32,6 @@ function paramsString(ex: ProgramExercise): string {
     minRpe === maxRpe ? `RPE ${minRpe}` : `RPE ${minRpe}–${maxRpe}`;
   return `${ex.sets} × ${repsStr} · ${rpeStr} · rec ${ex.restSeconds}s`;
 }
-
-const diffIcons = {
-  modified: <IconTrendingUp size={13} aria-hidden />,
-  new: <IconSparkles size={13} aria-hidden />,
-  removed: <IconMinus size={13} aria-hidden />,
-  unchanged: <IconMinus size={13} aria-hidden />,
-};
 
 export function ExerciseCard({ exercise: ex, index, showDiff }: Props) {
   const [open, setOpen] = useState(false);
