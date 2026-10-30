@@ -1,13 +1,14 @@
 import asyncio
 from datetime import datetime, timezone
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # I tuoi import nativi
 from app.db import AsyncSessionLocal
 from app.models import User, Exercise, Program, ProgramDay, ProgramExercise, TargetSet
 from app.auth import hash_password
 
-CATALOG_EXERCISES = [
+CATALOG_EXERCISES: list[dict[str, str]] = [
     {"name": "Panca Piana Bilanciere", "category": "chest", "type": "weight"},
     {"name": "Panca Inclinata Manubri", "category": "chest", "type": "weight"},
     {"name": "Croci Cavi Alti", "category": "chest", "type": "weight"},
@@ -40,7 +41,7 @@ CATALOG_EXERCISES = [
     {"name": "Ab Wheel", "category": "core", "type": "bodyweight"},
 ]
 
-async def fix_postgres_sequences(db):
+async def fix_postgres_sequences(db: AsyncSession):
     """Ripristina i contatori degli ID se il DB contiene già dei dati"""
     tables = ["users", "exercises", "programs", "program_days", "program_exercises", "target_sets"]
     print("🔄 Riallineamento dei contatori ID (Sequences) in corso...")
@@ -58,27 +59,31 @@ async def fix_postgres_sequences(db):
             pass
     await db.flush()
 
-async def seed_exercises(db) -> dict:
+async def seed_exercises(db: AsyncSession) -> dict[str, Exercise]:
     """Inserts the exercises catalog inside the db and returns the map name -> object"""
-    created = 0
-    exercise_map = {}
+    print("📚 Controllo catalogo esercizi...")
+    names = [ex["name"] for ex in CATALOG_EXERCISES]
+    res = await db.execute(select(Exercise).where(Exercise.name.in_(names)))
+    existing = res.scalars().all()
+    exercise_map = {e.name: e for e in existing}
+
+    new_exercises: list[Exercise] = []
     for ex in CATALOG_EXERCISES:
-        print("📚 Controllo catalogo esercizi...")
-        res = await db.execute(select(Exercise).where(Exercise.name == ex["name"]))
-        ex_obj = res.scalar_one_or_none()
-        if not ex_obj:
+        if ex["name"] not in exercise_map:
             ex_obj = Exercise(
                 name=ex["name"],
                 category=ex["category"],
                 type=ex["type"],
                 created_by=None
             )
-            db.add(ex_obj)
-            await db.flush()
-            created += 1
+            new_exercises.append(ex_obj)
+            exercise_map[ex["name"]] = ex_obj
             print(f"➕ Creato: {ex['name']}")
-        exercise_map[ex["name"]] = ex_obj
-    print(f"📚 Catalogo esercizi: {created} creati, {len(CATALOG_EXERCISES) - created} già presenti (totale {len(CATALOG_EXERCISES)})")
+    if new_exercises:
+        db.add_all(new_exercises)
+        await db.flush()
+    created, existing_count = len(new_exercises), len(CATALOG_EXERCISES)
+    print(f"📚 Catalogo esercizi: {created} creati, {existing_count - created} già presenti (totale {existing_count})")
     return exercise_map
 
 
