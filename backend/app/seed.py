@@ -7,6 +7,39 @@ from app.db import AsyncSessionLocal
 from app.models import User, Exercise, Program, ProgramDay, ProgramExercise, TargetSet
 from app.auth import hash_password
 
+CATALOG_EXERCISES = [
+    {"name": "Panca Piana Bilanciere", "category": "chest", "type": "weight"},
+    {"name": "Panca Inclinata Manubri", "category": "chest", "type": "weight"},
+    {"name": "Croci Cavi Alti", "category": "chest", "type": "weight"},
+    {"name": "Dip alle Parallele", "category": "chest", "type": "bodyweight"},
+    {"name": "Pec Deck", "category": "chest", "type": "weight"},
+    {"name": "Trazioni Lat Machine", "category": "back", "type": "weight"},
+    {"name": "Trazioni alla Sbarra", "category": "back", "type": "bodyweight"},
+    {"name": "Rematore Bilanciere", "category": "back", "type": "weight"},
+    {"name": "Rematore Manubrio", "category": "back", "type": "weight"},
+    {"name": "Pulley Basso", "category": "back", "type": "weight"},
+    {"name": "Stacco da Terra", "category": "back", "type": "weight"},
+    {"name": "Squat Bilanciere", "category": "legs", "type": "weight"},
+    {"name": "Leg Press", "category": "legs", "type": "weight"},
+    {"name": "Affondi Manubri", "category": "legs", "type": "weight"},
+    {"name": "Leg Extension", "category": "legs", "type": "weight"},
+    {"name": "Leg Curl", "category": "legs", "type": "weight"},
+    {"name": "Calf Raises", "category": "legs", "type": "weight"},
+    {"name": "Lento Avanti Bilanciere", "category": "shoulders", "type": "weight"},
+    {"name": "Arnold Press", "category": "shoulders", "type": "weight"},
+    {"name": "Alzate Laterali", "category": "shoulders", "type": "weight"},
+    {"name": "Face Pull", "category": "shoulders", "type": "weight"},
+    {"name": "Curl Bilanciere", "category": "arms", "type": "weight"},
+    {"name": "Curl Manubri Alternato", "category": "arms", "type": "weight"},
+    {"name": "Push-down Cavo", "category": "arms", "type": "weight"},
+    {"name": "French Press", "category": "arms", "type": "weight"},
+    {"name": "Plank Addominale", "category": "core", "type": "timed"},
+    {"name": "Crunch", "category": "core", "type": "bodyweight"},
+    {"name": "Russian Twist", "category": "core", "type": "bodyweight"},
+    {"name": "Leg Raise", "category": "core", "type": "bodyweight"},
+    {"name": "Ab Wheel", "category": "core", "type": "bodyweight"},
+]
+
 async def fix_postgres_sequences(db):
     """Ripristina i contatori degli ID se il DB contiene già dei dati"""
     tables = ["users", "exercises", "programs", "program_days", "program_exercises", "target_sets"]
@@ -24,6 +57,30 @@ async def fix_postgres_sequences(db):
             # Se una tabella non ha una sequenza standard, passiamo oltre senza bloccare lo script
             pass
     await db.flush()
+
+async def seed_exercises(db) -> dict:
+    """Inserts the exercises catalog inside the db and returns the map name -> object"""
+    created = 0
+    exercise_map = {}
+    for ex in CATALOG_EXERCISES:
+        print("📚 Controllo catalogo esercizi...")
+        res = await db.execute(select(Exercise).where(Exercise.name == ex["name"]))
+        ex_obj = res.scalar_one_or_none()
+        if not ex_obj:
+            ex_obj = Exercise(
+                name=ex["name"],
+                category=ex["category"],
+                type=ex["type"],
+                created_by=None
+            )
+            db.add(ex_obj)
+            await db.flush()
+        exercise_map[ex["name"]] = ex_obj
+        created += 1
+        print(f"➕ Creato: {ex["name"]}")
+    print(f"📚 Catalogo esercizi: {created} creati, {len(CATALOG_EXERCISES) - created} già presenti (totale {len(CATALOG_EXERCISES)})")
+    return exercise_map
+
 
 async def seed_data():
     print("🚀 Inizio popolamento database...")
@@ -77,26 +134,7 @@ async def seed_data():
             print(f"Cliente già presente (ID: {client.id}), procedo...")
 
         # 3. Gestione Esercizi Master (Evitiamo duplicati sul nome)
-        master_exercises = [
-            {"name": "Panca Piana Bilanciere", "category": "chest", "type": "weight"},
-            {"name": "Trazioni alla Sbarra", "category": "back", "type": "bodyweight"},
-            {"name": "Plank Addominale", "category": "core", "type": "timed"}
-        ]
-        
-        exercise_map = {}
-        for ex_data in master_exercises:
-            res = await db.execute(select(Exercise).where(Exercise.name == ex_data["name"]))
-            ex_obj = res.scalar_one_or_none()
-            if not ex_obj:
-                ex_obj = Exercise(
-                    name=ex_data["name"],
-                    category=ex_data["category"],
-                    type=ex_data["type"],
-                    created_by=None
-                )
-                db.add(ex_obj)
-                await db.flush()
-            exercise_map[ex_data["name"]] = ex_obj
+        exercise_map = await seed_exercises(db)
 
         # 4. Creazione della nuova Scheda d'allenamento di test
         timestamp = datetime.now().strftime("%d/%m %H:%M")
