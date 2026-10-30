@@ -418,7 +418,7 @@ export const WORKOUT_HISTORY: WorkoutSession[] = [
 export const CLIENTS: Client[] = [
   {
     id: 1,
-    name: "Marco Alberti",
+    fullName: "Marco Alberti",
     initials: "MA",
     colorBg: "#EFF6FF",
     colorText: "#1D4ED8",
@@ -428,7 +428,7 @@ export const CLIENTS: Client[] = [
   },
   {
     id: 2,
-    name: "Sara Ferretti",
+    fullName: "Sara Ferretti",
     initials: "SF",
     colorBg: "#FDF2F8",
     colorText: "#9D174D",
@@ -438,7 +438,7 @@ export const CLIENTS: Client[] = [
   },
   {
     id: 3,
-    name: "Luca Bianchi",
+    fullName: "Luca Bianchi",
     initials: "LB",
     colorBg: "#F0FDF4",
     colorText: "#166534",
@@ -448,7 +448,7 @@ export const CLIENTS: Client[] = [
   },
   {
     id: 4,
-    name: "Elena Rossi",
+    fullName: "Elena Rossi",
     initials: "ER",
     colorBg: "#FFFBEB",
     colorText: "#92400E",
