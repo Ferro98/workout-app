@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app import schemas
 
-from ..models import Exercise, User, Program, ProgramDay, ProgramExercise, TargetSet
+from ..models import Exercise, Program, ProgramDay, ProgramExercise, TargetSet
 
 async def get_programs_for_client(db: AsyncSession, client_id: int):
     """Estrae tutte le schede di uno specifico cliente."""
