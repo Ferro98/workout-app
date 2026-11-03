@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   IconChartBar,
   IconPencil,
@@ -6,17 +6,10 @@ import {
   IconSearch,
   IconTrash,
 } from "@tabler/icons-react";
-import { EXERCISES_DB } from "../../data/mock";
 import { TopBar } from "../../components/layout/TopBar";
 
-export type ExerciseType = "weight" | "bodyweight" | "timed" | "timed_weight";
-
-export interface Exercise {
-  id: number;
-  name: string;
-  category: "chest" | "back" | "legs" | "shoulders" | "arms" | "core";
-  type: ExerciseType;
-}
+import type { Exercise, ExerciseType } from "../../types";
+import { exerciseService } from "../../api/exerciseService";
 
 const TYPES: ExerciseType[] = ["weight", "bodyweight", "timed", "timed_weight"];
 
@@ -231,7 +224,9 @@ function ExerciseRow({
 }
 
 export default function EserciziPage() {
-  const [exercises, setExercises] = useState<Exercise[]>(EXERCISES_DB);
+  const [loading, setLoading] = useState(true);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
 
@@ -240,6 +235,26 @@ export default function EserciziPage() {
   >("all");
 
   const [typeFilter, setTypeFilter] = useState<ExerciseType | "all">("all");
+
+  useEffect(() => {
+    async function loadExercises() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await exerciseService.getAll();
+        setExercises(data);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Impossibile caricare gli esercizi.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadExercises();
+  }, []);
 
   const filteredExercises = useMemo(() => {
     return exercises.filter((exercise) => {
@@ -255,6 +270,8 @@ export default function EserciziPage() {
       return matchesSearch && matchesCategory && matchesType;
     });
   }, [exercises, search, categoryFilter, typeFilter]);
+
+  const showList = !loading && !error;
 
   const handleAddExercise = () => {
     const newExercise: Exercise = {
@@ -348,25 +365,36 @@ export default function EserciziPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
-        {filteredExercises.map((exercise) => (
-          <ExerciseRow
-            key={exercise.id}
-            exercise={exercise}
-            onSave={(updated) => {
-              setExercises((prev) =>
-                prev.map((ex) => (ex.id === updated.id ? updated : ex)),
-              );
-            }}
-            onDelete={() => {
-              setExercises((prev) =>
-                prev.filter((ex) => ex.id !== exercise.id),
-              );
-            }}
-            onHistory={() => {
-              console.log("Open history for:", exercise.name);
-            }}
-          />
-        ))}
+        {loading && (
+          <p className="text-center text-[13px] text-neutral-400 pt-8">
+            Caricamento esercizi...
+          </p>
+        )}
+        {error && (
+          <p className="text-center text-[13px] text-neutral-500 dark:text-neutral-400 pt-8">
+            {error}
+          </p>
+        )}
+        {showList &&
+          filteredExercises.map((exercise) => (
+            <ExerciseRow
+              key={exercise.id}
+              exercise={exercise}
+              onSave={(updated) => {
+                setExercises((prev) =>
+                  prev.map((ex) => (ex.id === updated.id ? updated : ex)),
+                );
+              }}
+              onDelete={() => {
+                setExercises((prev) =>
+                  prev.filter((ex) => ex.id !== exercise.id),
+                );
+              }}
+              onHistory={() => {
+                console.log("Open history for:", exercise.name);
+              }}
+            />
+          ))}
       </div>
     </div>
   );
