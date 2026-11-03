@@ -30,7 +30,7 @@ app.add_middleware(
 # Tutte avranno il prefisso /api (es. /api/clients, /api/exercises)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(clients.router, prefix="/api")
-# app.include_router(exercises.router, prefix="/api")
+app.include_router(exercises.router, prefix="/api")
 app.include_router(programs.router, prefix="/api")
 app.include_router(sessions.router, prefix="/api")
 

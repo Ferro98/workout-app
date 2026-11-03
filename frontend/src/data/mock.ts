@@ -1,42 +1,4 @@
-import type { Program, WorkoutSession, Client, Exercise } from "../types";
-
-export const EXERCISES_DB: Exercise[] = [
-  { id: 1, name: "Panca Piana Bilanciere", category: "chest", type: "weight" },
-  { id: 2, name: "Panca Inclinata Manubri", category: "chest", type: "weight" },
-  { id: 3, name: "Croci Cavi Alti", category: "chest", type: "weight" },
-  { id: 4, name: "Dip alle Parallele", category: "chest", type: "bodyweight" },
-  { id: 5, name: "Pec Deck", category: "chest", type: "weight" },
-  { id: 6, name: "Trazioni Lat Machine", category: "back", type: "weight" },
-  { id: 7, name: "Trazioni alla Sbarra", category: "back", type: "bodyweight" },
-  { id: 8, name: "Rematore Bilanciere", category: "back", type: "weight" },
-  { id: 9, name: "Rematore Manubrio", category: "back", type: "weight" },
-  { id: 10, name: "Pulley Basso", category: "back", type: "weight" },
-  { id: 11, name: "Stacco da Terra", category: "back", type: "weight" },
-  { id: 12, name: "Squat Bilanciere", category: "legs", type: "weight" },
-  { id: 13, name: "Leg Press", category: "legs", type: "weight" },
-  { id: 14, name: "Affondi Manubri", category: "legs", type: "weight" },
-  { id: 15, name: "Leg Extension", category: "legs", type: "weight" },
-  { id: 16, name: "Leg Curl", category: "legs", type: "weight" },
-  { id: 17, name: "Calf Raises", category: "legs", type: "weight" },
-  {
-    id: 18,
-    name: "Lento Avanti Bilanciere",
-    category: "shoulders",
-    type: "weight",
-  },
-  { id: 19, name: "Arnold Press", category: "shoulders", type: "weight" },
-  { id: 20, name: "Alzate Laterali", category: "shoulders", type: "weight" },
-  { id: 21, name: "Face Pull", category: "shoulders", type: "weight" },
-  { id: 22, name: "Curl Bilanciere", category: "arms", type: "weight" },
-  { id: 23, name: "Curl Manubri Alternato", category: "arms", type: "weight" },
-  { id: 24, name: "Push-down Cavo", category: "arms", type: "weight" },
-  { id: 25, name: "French Press", category: "arms", type: "weight" },
-  { id: 26, name: "Plank", category: "core", type: "timed" },
-  { id: 27, name: "Crunch", category: "core", type: "bodyweight" },
-  { id: 28, name: "Russian Twist", category: "core", type: "bodyweight" },
-  { id: 29, name: "Leg Raise", category: "core", type: "bodyweight" },
-  { id: 30, name: "Ab Wheel", category: "core", type: "bodyweight" },
-];
+import type { Program, WorkoutSession, Client } from "../types";
 
 export const CURRENT_PROGRAM: Program = {
   id: 1,

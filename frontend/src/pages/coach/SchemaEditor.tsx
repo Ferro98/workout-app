@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   IconArrowLeft,
   IconPlus,
@@ -11,14 +11,14 @@ import {
   IconX,
   IconDeviceFloppy,
 } from "@tabler/icons-react";
-import { TopBar } from "../../components/layout/TopBar";
-import { EXERCISES_DB } from "../../data/mock";
 import type {
+  Exercise,
   Program,
   ProgramDay,
   ProgramExercise,
   TargetSet,
 } from "../../types";
+import { exerciseService } from "../../api/exerciseService";
 
 // ─────────────────────────────────────────────
 // Tipi locali editor
@@ -84,12 +84,14 @@ function ExercisePicker({
   onSelect: (id: number, name: string) => void;
   onClose: () => void;
 }) {
+  const [loading, setLoading] = useState(true);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("tutti");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newCat, setNewCat] =
-    useState<(typeof EXERCISES_DB)[0]["category"]>("chest");
+  const [newCat, setNewCat] = useState<Exercise["category"]>("chest");
 
   const cats = ["tutti", "chest", "back", "legs", "shoulders", "arms", "core"];
   const catLabel: Record<string, string> = {
@@ -102,14 +104,36 @@ function ExercisePicker({
     core: "Core",
   };
 
-  const filtered = EXERCISES_DB.filter(
+  useEffect(() => {
+    async function loadExercises() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await exerciseService.getAll();
+        setExercises(data);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Impossibile caricare gli esercizi.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadExercises();
+  }, []);
+
+  const filtered = exercises.filter(
     (e) =>
       (cat === "tutti" || e.category === cat) &&
       e.name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const showList = !loading && !error;
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-950">
+    <div className="fixed inset-y-0 left-1/2 z-50 flex w-full max-w-[430px] -translate-x-1/2 flex-col bg-white dark:bg-neutral-950">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-neutral-200 dark:border-neutral-800">
         <button
@@ -224,38 +248,49 @@ function ExercisePicker({
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-4">
-            {filtered.map((e, i) => (
-              <button
-                key={e.id}
-                onClick={() => onSelect(e.id, e.name)}
-                className={`w-full flex items-center gap-3 py-3 text-left
+            {loading && (
+              <p className="text-center text-[13px] text-neutral-400 pt-8">
+                Caricamento esercizi...
+              </p>
+            )}
+            {error && (
+              <p className="text-center text-[13px] text-neutral-500 dark:text-neutral-400 pt-8">
+                {error}
+              </p>
+            )}
+            {showList &&
+              filtered.map((e, i) => (
+                <button
+                  key={e.id}
+                  onClick={() => onSelect(e.id, e.name)}
+                  className={`w-full flex items-center gap-3 py-3 text-left
                             ${
                               i < filtered.length - 1
                                 ? "border-b border-neutral-100 dark:border-neutral-800"
                                 : ""
                             }`}
-              >
-                <div className="flex-1">
-                  <p className="text-[14px] text-neutral-900 dark:text-neutral-100">
-                    {e.name}
-                  </p>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    {catLabel[e.category]} ·{" "}
-                    {e.type === "weight"
-                      ? "Con peso"
-                      : e.type === "bodyweight"
-                        ? "Corpo libero"
-                        : "Durata"}
-                  </p>
-                </div>
-                <IconPlus
-                  size={15}
-                  className="text-neutral-400 shrink-0"
-                  aria-hidden
-                />
-              </button>
-            ))}
-            {filtered.length === 0 && (
+                >
+                  <div className="flex-1">
+                    <p className="text-[14px] text-neutral-900 dark:text-neutral-100">
+                      {e.name}
+                    </p>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                      {catLabel[e.category]} ·{" "}
+                      {e.type === "weight"
+                        ? "Con peso"
+                        : e.type === "bodyweight"
+                          ? "Corpo libero"
+                          : "Durata"}
+                    </p>
+                  </div>
+                  <IconPlus
+                    size={15}
+                    className="text-neutral-400 shrink-0"
+                    aria-hidden
+                  />
+                </button>
+              ))}
+            {showList && filtered.length === 0 && (
               <p className="text-center text-[13px] text-neutral-400 pt-8">
                 Nessun esercizio trovato
               </p>
@@ -777,42 +812,40 @@ export function SchemaEditor({
     setPickerDayIdx(null);
   };
 
-  const subtitle =
-    mode === "new-version"
-      ? `Nuova versione · ${clientName}`
-      : `Modifica diretta · ${clientName}`;
+  const modeLabel =
+    mode === "new-version" ? "Nuova versione" : "Modifica diretta";
 
   return (
     <>
       <div className="flex flex-col h-full">
-        <TopBar
-          title={draft.name}
-          subtitle={subtitle}
-          right={
+        {/* Header unico: nome scheda, contesto, nota generale */}
+        <header
+          className="px-4 pt-5 pb-3 border-b border-neutral-200 dark:border-neutral-800
+                        bg-white dark:bg-neutral-950 space-y-2"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={draft.name}
+                onChange={(e) => update({ ...draft, name: e.target.value })}
+                className="w-full text-[18px] font-medium leading-tight text-neutral-900 dark:text-neutral-100
+                           bg-transparent outline-none border-b border-transparent
+                           hover:border-neutral-300 dark:hover:border-neutral-600
+                           focus:border-neutral-500 dark:focus:border-neutral-400 transition-colors"
+              />
+              <p className="text-[12px] text-neutral-400 mt-0.5">
+                {modeLabel} · {clientName}
+              </p>
+            </div>
             <button
               onClick={onBack}
-              className="flex items-center gap-1.5 text-[13px] text-neutral-500"
+              className="shrink-0 flex items-center gap-1.5 text-[13px] text-neutral-500"
             >
               <IconArrowLeft size={15} aria-hidden />
               Indietro
             </button>
-          }
-        />
-
-        {/* Nome scheda + nota generale */}
-        <div
-          className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800
-                        bg-white dark:bg-neutral-950 space-y-2"
-        >
-          <input
-            type="text"
-            value={draft.name}
-            onChange={(e) => update({ ...draft, name: e.target.value })}
-            className="w-full text-[16px] font-medium text-neutral-900 dark:text-neutral-100
-                       bg-transparent outline-none border-b border-transparent
-                       hover:border-neutral-300 dark:hover:border-neutral-600
-                       focus:border-neutral-500 dark:focus:border-neutral-400 transition-colors"
-          />
+          </div>
           <textarea
             value={draft.coachNote ?? ""}
             onChange={(e) =>
@@ -824,7 +857,7 @@ export function SchemaEditor({
                        bg-transparent outline-none resize-none
                        placeholder:text-neutral-300 dark:placeholder:text-neutral-600"
           />
-        </div>
+        </header>
 
         {mode === "new-version" && (
           <div

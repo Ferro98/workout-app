@@ -25,8 +25,13 @@ async function customFetch(endpoint: string, options: RequestInit = {}) {
     headers,
   };
 
-  // Esegue la chiamata
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  // fetch rejects with a generic TypeError when the server is unreachable
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  } catch {
+    throw new Error("Impossibile contattare il server. Riprova tra poco.");
+  }
 
   // Gestione Errori: a differenza di Axios, fetch NON lancia eccezioni per errori HTTP (es. 404 o 401).
   // Dobbiamo forzarlo noi.
