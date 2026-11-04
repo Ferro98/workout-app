@@ -24,14 +24,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function init() {
       try {
-        let token = localStorage.getItem("token");
+        const token = localStorage.getItem("token");
 
         if (token) {
           try {
             const me = await authService.getMe();
             setUser(me);
             return;
-          } catch (err) {
+          } catch {
             console.warn(
               "[Auth] Il token in memoria è scaduto o non valido. Procedo al re-login...",
             );

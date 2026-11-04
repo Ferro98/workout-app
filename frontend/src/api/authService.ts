@@ -43,7 +43,7 @@ export const authService = {
   /**
    * Effettua la Registrazione (JSON standard)
    */
-  register: async (payload: RegisterPayload): Promise<any> => {
+  register: async (payload: RegisterPayload): Promise<TokenResponse> => {
     // Qui possiamo usare tranquillamente il nostro apiClient perché è un normale JSON
     return await apiClient.post("/auth/register", payload);
   },

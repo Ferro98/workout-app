@@ -49,7 +49,7 @@ Legend: ✅ working and connected end-to-end · 🟡 partially implemented / wit
 | **Saving a workout session**                  |    ✅    |    🟡     | The `POST /api/clients/{id}/sessions` endpoint and `sessionService.createSession` are correct and aligned, **but no page calls them yet**: `WorkoutPage.finish()` doesn't send the session to the backend. This is the most important gap to close. |
 | Workout history page (client)                 |    —    |    ⬜     | `StoricoPage.tsx` is empty, the route shows a placeholder.                                                                                                                                                                         |
 | Coach notes page                              |    —    |    ⬜     | `NotePage.tsx` is empty, the route shows a placeholder.                                                                                                                                                                            |
-| Exercise CRUD (catalog)                       |    ⬜    |    🟡     | The `exercises.py` router exists but is **disabled** in `main.py` and only exposes a dummy endpoint. `EserciziPage` works but reads from a mock array (`data/mock.ts`), not from the DB.                                          |
+| Exercise catalog                              |    🟡    |    🟡     | `GET /api/exercises/` is live (any authenticated user) and `seed.py` loads the 30-exercise catalog. `EserciziPage` and the editor picker read from it. Create/edit/delete are **not implemented**: the buttons only change local state.                                          |
 | Coach → client ownership                      |    ✅    |    ✅     | Verified on all main endpoints (see fixes listed below).                                                                                                                                                                           |
 
 ---
@@ -150,7 +150,8 @@ uv run alembic upgrade head
 - **Workout sessions aren't persisted.** `WorkoutPage.finish()` never calls `sessionService.createSession`, even though the backend endpoint and the service function are both implemented and aligned. This is the single most important gap.
 - **No real login page.** The frontend auto-logs in with hardcoded demo credentials (`coach@test.com` / `password123`) instead of a login form — there's a working `/auth/login` endpoint on the backend, just no UI for it yet.
 - **`UserMe.name` vs. `fullName` mismatch.** The backend already serializes the user's name as `fullName` (camelCase), but the frontend's `UserMe` type still declares `name`, so the display name resolves to `undefined` at runtime.
-- **Exercise catalog isn't wired up.** The `exercises.py` router exists but is commented out in `main.py`; `EserciziPage` renders from a static mock array (`data/mock.ts`) instead of the database.
+- **Exercise creation, editing and deletion aren't persisted.** The "Crea nuovo" button in the editor picker and the "Nuovo"/edit/delete controls in `EserciziPage` only change local state with fake IDs. Using a fake ID in a program causes a 500 on save (foreign key violation). There are no `POST`/`PATCH`/`DELETE` endpoints for exercises yet.
+- **`WorkoutPage` has lint warnings.** Four `react-hooks` rules (`purity`, `set-state-in-effect`, `exhaustive-deps`, `refs`) are downgraded to warnings for that file in `eslint.config.js`. TODO: fix them properly when the page is rewritten on top of the API.
 - **Hardcoded API base URL.** `http://localhost:8000` is hardcoded in `apiClient.ts` and `authService.ts` instead of coming from an environment variable, so there's no easy way to point the frontend at a deployed backend yet.
 - **`DATABASE_PASS` is unused.** The env var is documented and read into the environment but never referenced by the code, which expects the password to already be embedded in `DATABASE_URL`.
 
@@ -159,7 +160,7 @@ uv run alembic upgrade head
 1. Wire `WorkoutPage.finish()` to `sessionService.createSession` so completed sessions actually persist.
 2. Build a real login page and remove the hardcoded auto-login.
 3. Fix the `UserMe` type to match the backend's camelCase `fullName`.
-4. Re-enable the `exercises.py` router and point `EserciziPage` at the real API instead of the mock data.
+4. Add `POST`/`PATCH`/`DELETE` endpoints for exercises (coach only) and wire up the create/edit/delete controls.
 5. Move the frontend's API base URL into an environment variable (`VITE_API_URL` or similar).
 6. Build out `StoricoPage` (workout history) and `NotePage` (coach notes) — both currently placeholders.
 7. Add a test suite against `TEST_DATABASE_URL`, which is already provisioned for but unused.

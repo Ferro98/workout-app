@@ -1,22 +1,22 @@
 // src/api/apiClient.ts
 
 export const API_BASE_URL: string =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 /**
  * Funzione base che wrappa la fetch nativa.
  * Agisce come l'interceptor di Axios: attacca il token e lancia errori se lo status non è 2xx.
  */
 async function customFetch(endpoint: string, options: RequestInit = {}) {
-  const token = localStorage.getItem('token');
-  
+  const token = localStorage.getItem("token");
+
   // Inizializza gli headers
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+  headers.set("Content-Type", "application/json");
 
   // Attacca il token JWT se esiste
   if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   // Costruisci la configurazione finale
@@ -43,7 +43,7 @@ async function customFetch(endpoint: string, options: RequestInit = {}) {
       if (errorData && errorData.detail) {
         errorMessage = errorData.detail;
       }
-    } catch (e) {
+    } catch {
       // Se il body non è JSON, mantieni l'errore generico
     }
     throw new Error(errorMessage);
@@ -61,15 +61,23 @@ async function customFetch(endpoint: string, options: RequestInit = {}) {
 // Esportiamo un oggetto apiClient con la stessa "forma" di Axios
 // così nei tuoi service non dovrai cambiare il modo in cui scrivi le chiamate!
 export const apiClient = {
-  get: (endpoint: string, options?: RequestInit) => 
-    customFetch(endpoint, { ...options, method: 'GET' }),
-    
-  post: (endpoint: string, body: any, options?: RequestInit) => 
-    customFetch(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
-    
-  patch: (endpoint: string, body: any, options?: RequestInit) => 
-    customFetch(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
-    
-  delete: (endpoint: string, options?: RequestInit) => 
-    customFetch(endpoint, { ...options, method: 'DELETE' }),
+  get: (endpoint: string, options?: RequestInit) =>
+    customFetch(endpoint, { ...options, method: "GET" }),
+
+  post: (endpoint: string, body: unknown, options?: RequestInit) =>
+    customFetch(endpoint, {
+      ...options,
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  patch: (endpoint: string, body: unknown, options?: RequestInit) =>
+    customFetch(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  delete: (endpoint: string, options?: RequestInit) =>
+    customFetch(endpoint, { ...options, method: "DELETE" }),
 };
