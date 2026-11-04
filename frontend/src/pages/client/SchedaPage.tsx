@@ -30,9 +30,11 @@ export default function SchedaPage() {
         setError(null);
         const data = await programService.getMyActiveProgram();
         setProgram(data);
-      } catch (err: any) {
+      } catch (err) {
         setError(
-          err.message || "Impossibile caricare la scheda di allenamento.",
+          err instanceof Error
+            ? err.message
+            : "Impossibile caricare la scheda di allenamento.",
         );
       } finally {
         setLoading(false);
