@@ -81,6 +81,7 @@ The API is available at `http://localhost:8000`, Swagger at `http://localhost:80
 | `ALGORITHM`                    |    ✅    | JWT algorithm, e.g. `HS256`                                                                                                            |
 | `ACCESS_TOKEN_EXPIRE_MINUTES`  |    ✅    | Token lifetime in minutes                                                                                                              |
 | `TEST_DATABASE_URL`            |    —    | Reserved for a future test suite against a separate DB; **not yet used** by the code                                                    |
+| `CORS_ORIGINS`                 |    —    | Comma-separated list of frontend origins allowed by CORS. Defaults to `http://localhost:5173,http://127.0.0.1:5173`; set it to the frontend's URL in production |
 
 See `backend/.env.example`.
 
@@ -94,7 +95,7 @@ npm install
 npm run dev
 ```
 
-The app runs on `http://localhost:5173` and expects the backend on `http://localhost:8000` (hardcoded in `apiClient.ts` and `authService.ts` — see [Known Issues](#known-issues)).
+The app runs on `http://localhost:5173`. By default it expects the backend on `http://localhost:8000`; to point it somewhere else, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL` (the file is git-ignored; Vite reads it at startup, so restart `npm run dev` after changing it).
 
 ---
 
@@ -152,7 +153,6 @@ uv run alembic upgrade head
 - **`UserMe.name` vs. `fullName` mismatch.** The backend already serializes the user's name as `fullName` (camelCase), but the frontend's `UserMe` type still declares `name`, so the display name resolves to `undefined` at runtime.
 - **Exercise creation, editing and deletion aren't persisted.** The "Crea nuovo" button in the editor picker and the "Nuovo"/edit/delete controls in `EserciziPage` only change local state with fake IDs. Using a fake ID in a program causes a 500 on save (foreign key violation). There are no `POST`/`PATCH`/`DELETE` endpoints for exercises yet.
 - **`WorkoutPage` has lint warnings.** Four `react-hooks` rules (`purity`, `set-state-in-effect`, `exhaustive-deps`, `refs`) are downgraded to warnings for that file in `eslint.config.js`. TODO: fix them properly when the page is rewritten on top of the API.
-- **Hardcoded API base URL.** `http://localhost:8000` is hardcoded in `apiClient.ts` and `authService.ts` instead of coming from an environment variable, so there's no easy way to point the frontend at a deployed backend yet.
 - **`DATABASE_PASS` is unused.** The env var is documented and read into the environment but never referenced by the code, which expects the password to already be embedded in `DATABASE_URL`.
 
 ## Next Steps
@@ -161,6 +161,5 @@ uv run alembic upgrade head
 2. Build a real login page and remove the hardcoded auto-login.
 3. Fix the `UserMe` type to match the backend's camelCase `fullName`.
 4. Add `POST`/`PATCH`/`DELETE` endpoints for exercises (coach only) and wire up the create/edit/delete controls.
-5. Move the frontend's API base URL into an environment variable (`VITE_API_URL` or similar).
-6. Build out `StoricoPage` (workout history) and `NotePage` (coach notes) — both currently placeholders.
-7. Add a test suite against `TEST_DATABASE_URL`, which is already provisioned for but unused.
+5. Build out `StoricoPage` (workout history) and `NotePage` (coach notes) — both currently placeholders.
+6. Add a test suite against `TEST_DATABASE_URL`, which is already provisioned for but unused.
