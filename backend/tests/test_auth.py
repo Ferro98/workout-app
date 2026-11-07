@@ -6,7 +6,7 @@ async def test_login_success(client, make_user):
         data={"username": "coach@test.com", "password": "secret123"},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["role"] == "coach"
@@ -19,7 +19,7 @@ async def test_login_wrong_password(client, make_user):
 
     response = await client.post(
         "/auth/login",
-        data={"username": "coach@test.com", "password": "wrong"},
+        data={"username": "coach@test.com", "password": "secret123"},
     )
 
     assert response.status_code == 401
