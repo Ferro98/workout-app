@@ -24,7 +24,7 @@ async def get_active_program_for_client(db: AsyncSession, client_id: int, coach_
         .join(User, Program.client_id == User.id)
         .where(
             Program.client_id == client_id, 
-            Program.is_active == True,
+            Program.is_active.is_(True),
             User.coach_id == coach_id)
         # Pre-carichiamo le relazioni a cascata
         .options(

@@ -139,7 +139,7 @@ async def patch_program(
         raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questa scheda")
 
     # 3. Eseguiamo l'aggiornamento
-    updated_program = await crud_programs.update_program_metadata(
+    await crud_programs.update_program_metadata(
         db=db, 
         program_id=program_id, 
         program_in=program_in

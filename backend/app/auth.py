@@ -43,7 +43,7 @@ async def get_current_user(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
-        raise exc
+        raise exc from None
 
     user = await db.get(User, user_id)
     if not user:
