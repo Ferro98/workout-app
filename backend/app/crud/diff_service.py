@@ -1,9 +1,10 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app import schemas
-from app.models import Program, ExerciseHistory
 from app.crud.programs import get_previous_program
 from app.diff import compute_program_diff
+from app.models import ExerciseHistory, Program
 
 # compute_program_diff usa 'added', gli schemi Pydantic usano 'new' — mappiamo qui una volta sola
 _DIFF_TYPE_MAP = {

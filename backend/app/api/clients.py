@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .. import schemas
+from ..auth import require_coach
+from ..crud import users as crud_users
 from ..db import get_db
 from ..models import User
-from ..auth import require_coach
-from .. import schemas
-from ..crud import users as crud_users
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
 

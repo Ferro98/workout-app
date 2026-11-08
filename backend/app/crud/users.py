@@ -2,7 +2,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..models import User, Program, ProgramDay, ProgramExercise
+from ..models import Program, ProgramDay, ProgramExercise, User
+
 
 # --- 1. ESTRAZIONE CLIENTI ---
 async def get_clients_for_coach(db: AsyncSession, coach_id: int):

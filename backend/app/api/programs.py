@@ -1,13 +1,15 @@
-from app.crud import diff_service
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.crud import diff_service
+
+from .. import schemas
+from ..auth import get_current_user, require_client, require_coach
+from ..crud import programs as crud_programs
 from ..db import get_db
 from ..models import User
-from ..auth import get_current_user, require_coach, require_client
-from .. import schemas
-from ..crud import programs as crud_programs
 
 router = APIRouter(prefix="/programs", tags=["Programs"])
 

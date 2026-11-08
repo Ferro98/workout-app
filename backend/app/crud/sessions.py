@@ -1,10 +1,12 @@
-from datetime import datetime
 from collections import defaultdict
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select
-from app.models import Session, SessionSet, ExerciseHistory, ProgramExercise
+
 from app import schemas
+from app.models import ExerciseHistory, ProgramExercise, Session, SessionSet
+
 
 async def create_workout_session(db: AsyncSession, client_id: int, session_in: schemas.SessionCreate):
     # 1. Creiamo l'entità Session base

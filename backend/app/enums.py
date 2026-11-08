@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class ExerciseType(StrEnum):
     WEIGHT = "weight"
     BODYWEIGHT = "bodyweight"
