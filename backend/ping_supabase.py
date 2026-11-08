@@ -1,8 +1,9 @@
 import asyncio
 import os
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import text
+
 from dotenv import load_dotenv
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 # Carica le variabili d'ambiente (assicurati che punti al DB di Supabase)
 load_dotenv()

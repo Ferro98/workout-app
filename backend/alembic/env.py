@@ -1,10 +1,10 @@
-from logging.config import fileConfig
 import asyncio
 import os
-from dotenv import load_dotenv
+from logging.config import fileConfig
 
-from sqlalchemy.ext.asyncio import create_async_engine
+from dotenv import load_dotenv
 from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 
@@ -18,8 +18,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Importa Base e tutti i modelli — necessario per autogenerate
-from app.db import Base
 import app.models  # noqa: F401 — side effect: registra i modelli su Base.metadata
+from app.db import Base
 
 target_metadata = Base.metadata
 

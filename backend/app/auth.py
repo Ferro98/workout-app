@@ -1,11 +1,11 @@
+import os
 from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
+
 import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-import os
 
 from .db import get_db
 from .models import User
@@ -43,7 +43,7 @@ async def get_current_user(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
-        raise exc
+        raise exc from None
 
     user = await db.get(User, user_id)
     if not user:

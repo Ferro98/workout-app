@@ -1,7 +1,7 @@
-from dotenv import load_dotenv
 import os
 
 import pytest
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -18,10 +18,12 @@ os.environ.setdefault("SECRET_KEY", "test-secret-not-used-anywhere")
 os.environ.setdefault("ALGORITHM", "HS256")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
-from alembic import command
+from pathlib import Path
+
 from alembic.config import Config
 
-from pathlib import Path
+from alembic import command
+
 
 @pytest.fixture(scope="session", autouse=True)
 def apply_migrations():
@@ -35,6 +37,7 @@ from app.auth import create_token, hash_password
 from app.db import AsyncSessionLocal, Base, engine
 from app.main import app
 from app.models import Exercise, User
+
 
 @pytest.fixture(autouse=True)
 async def clean_db():

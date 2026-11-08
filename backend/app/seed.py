@@ -1,11 +1,12 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
+
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import AsyncSessionLocal
-from app.models import User, Exercise, Program, ProgramDay, ProgramExercise, TargetSet
 from app.auth import hash_password
+from app.db import AsyncSessionLocal
+from app.models import Exercise, Program, ProgramDay, ProgramExercise, TargetSet, User
 
 CATALOG_EXERCISES: list[dict[str, str]] = [
     {"name": "Panca Piana Bilanciere", "category": "chest", "type": "weight"},

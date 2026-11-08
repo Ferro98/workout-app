@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from ..db import get_db
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from .. import schemas
 from ..auth import get_current_user
 from ..crud import exercises as crud_exercises
+from ..db import get_db
 
 router = APIRouter(prefix="/exercises", tags=["Exercises"])
 

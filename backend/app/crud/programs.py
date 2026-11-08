@@ -1,9 +1,11 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app import schemas
 
 from ..models import Exercise, Program, ProgramDay, ProgramExercise, TargetSet
+
 
 async def get_programs_for_client(db: AsyncSession, client_id: int):
     """Estrae tutte le schede di uno specifico cliente."""
@@ -27,7 +29,7 @@ async def get_active_program_for_client(db: AsyncSession, client_id: int):
     """Estrae la scheda attiva di uno specifico cliente."""
     stmt = (
         select(Program)
-        .where(Program.client_id == client_id, Program.is_active == True)
+        .where(Program.client_id == client_id, Program.is_active.is_(True))
         .options(
             selectinload(Program.days)
             .selectinload(ProgramDay.exercises)
@@ -59,7 +61,7 @@ async def create_nested_program(db: AsyncSession, program_data: schemas.ProgramC
     # 1. Disattiviamo le schede attive precedenti per il cliente
     await db.execute(
         update(Program)
-        .where(Program.client_id == client_id, Program.is_active == True)
+        .where(Program.client_id == client_id, Program.is_active.is_(True))
         .values(is_active=False)
     )
 
@@ -82,7 +84,7 @@ async def create_nested_program(db: AsyncSession, program_data: schemas.ProgramC
             coach_note=day_in.coach_note
         )
 
-        for idx, ex_in in enumerate(day_in.exercises):
+        for ex_in in day_in.exercises:
             # --- FIX: Recuperiamo il TYPE dall'esercizio MASTER ---
             ex_master_stmt = select(Exercise).where(Exercise.id == ex_in.exercise_id)
             ex_master_res = await db.execute(ex_master_stmt)
@@ -175,7 +177,7 @@ async def create_program_version(
     # 2. Disattiviamo la vecchia scheda (e qualsiasi altra scheda attiva per sicurezza)
     await db.execute(
         update(Program)
-        .where(Program.client_id == parent_program.client_id, Program.is_active == True)
+        .where(Program.client_id == parent_program.client_id, Program.is_active.is_(True))
         .values(is_active=False)
     )
 

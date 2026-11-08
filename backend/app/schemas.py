@@ -1,18 +1,20 @@
 from datetime import datetime
 from typing import List, Optional
-from app.enums import DiffStatus, ExerciseCategory, ExerciseType
+
 from pydantic import (
-    BaseModel, 
-    ConfigDict, 
-    Field, 
-    AliasChoices, 
-    AliasPath, 
-    EmailStr, 
-    field_serializer, 
-    computed_field, 
-    model_validator
+    AliasChoices,
+    AliasPath,
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_serializer,
+    model_validator,
 )
 from pydantic.alias_generators import to_camel
+
+from app.enums import DiffStatus, ExerciseCategory, ExerciseType
+
 
 # region --- CONFIGURAZIONE BASE ---
 class BaseSchema(BaseModel):

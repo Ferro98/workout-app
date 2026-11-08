@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Importa i router dalla tua cartella api
-from app.api import clients, exercises, programs, sessions, auth
+from app.api import auth, clients, exercises, programs, sessions
 
 app = FastAPI(title="Workout App API")
 
