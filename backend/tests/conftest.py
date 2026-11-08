@@ -34,7 +34,7 @@ from sqlalchemy import text
 from app.auth import create_token, hash_password
 from app.db import AsyncSessionLocal, Base, engine
 from app.main import app
-from app.models import User
+from app.models import Exercise, User
 
 @pytest.fixture(autouse=True)
 async def clean_db():
@@ -80,3 +80,20 @@ def auth_headers():
         return {"Authorization": f"Bearer {create_token(user.id, user.role)}"}
 
     return _auth_headers
+
+@pytest.fixture
+def make_exercise():
+    async def _make_exercise(name: str = "Test Exercise", category: str = "chest", type: str = "weight") -> Exercise:
+        async with AsyncSessionLocal() as db:
+            exercise = Exercise(
+                name=name,
+                category=category,
+                type=type,
+                created_by=None
+            )
+            db.add(exercise)
+            await db.commit()
+            await db.refresh(exercise)
+            return exercise
+
+    return _make_exercise
