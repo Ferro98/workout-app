@@ -31,7 +31,7 @@ def apply_migrations():
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
-from app.auth import hash_password
+from app.auth import create_token, hash_password
 from app.db import AsyncSessionLocal, Base, engine
 from app.main import app
 from app.models import User
@@ -73,3 +73,10 @@ def make_user():
             return user
 
     return _make_user
+
+@pytest.fixture
+def auth_headers():
+    def _auth_headers(user: User) -> dict[str, str]:
+        return {"Authorization": f"Bearer {create_token(user.id, user.role)}"}
+
+    return _auth_headers
