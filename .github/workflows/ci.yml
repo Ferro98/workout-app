@@ -50,6 +50,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --frozen
+      - run: uv run ruff check . --output-format=github
       - run: uv run python -c "from app.main import app"
         env:
           SECRET_KEY: ci-dummy-secret-not-used-anywhere
