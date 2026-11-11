@@ -30,6 +30,7 @@ Monorepo with two independent projects:
 | Database     | PostgreSQL (Supabase in dev)          | `backend/ping_supabase.py` to prevent auto-pause         |
 | Auth         | `python-jose` + `bcrypt`              | JWT with `sub`/`role`/`exp`, OAuth2 password flow         |
 | Package mgmt | `uv` (backend) · `npm` (frontend)     | See `backend/uv.lock` / `frontend/package-lock.json`      |
+| Containers   | Docker + Docker Compose               | Multi-stage images, non-root, healthchecks                |
 
 ---
 
@@ -97,6 +98,35 @@ npm run dev
 ```
 
 The app runs on `http://localhost:5173`. By default it expects the backend on `http://localhost:8000`; to point it somewhere else, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL` (the file is git-ignored; Vite reads it at startup, so restart `npm run dev` after changing it).
+
+### Run everything with Docker
+
+Requires Docker with Compose. This starts a local PostgreSQL, the backend and the frontend together.
+
+```bash
+cp .env.example .env                                  # then set POSTGRES_PASSWORD and SECRET_KEY
+docker compose up --build                             # db → migrations → backend → frontend
+docker compose --profile seed run --rm seed           # optional: demo users and the exercise catalog
+```
+
+The app is then on `http://localhost:8080` and the API on `http://localhost:8000`. Stop it with `docker compose down`; add `-v` to also delete the database volume and start from scratch.
+
+How the stack fits together:
+
+- **`db`**: PostgreSQL 16. Data lives in the named volume `db-data`, so it survives `docker compose down` (but not `down -v`).
+- **`migrate`**: one-off service that runs `alembic upgrade head` once the database is healthy, then exits. The backend only starts if it succeeds.
+- **`backend`**: the FastAPI image (`backend/Dockerfile`), running as a non-root user, with a `/health` healthcheck.
+- **`frontend`**: the Vite build served by unprivileged nginx (`frontend/Dockerfile`, `frontend/nginx.conf`), with SPA fallback to `index.html`.
+- **`seed`**: only runs on demand (`--profile seed`). It re-creates a demo program on every run, so don't use it on a database you care about.
+
+Configuration comes from the git-ignored `.env` at the repository root (see `.env.example`):
+
+| Variable                                         | Description                                                                                          |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credentials of the local database. The password is only applied the first time the volume is created. |
+| `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT settings for the backend.                                                                  |
+| `CORS_ORIGINS`                                   | Origin the browser loads the frontend from (`http://localhost:8080`).                                  |
+| `VITE_API_URL`                                   | Where the **browser** reaches the backend (`http://localhost:8000`). It is baked into the frontend at build time, so rebuild (`--build`) after changing it. |
 
 ---
 
