@@ -82,10 +82,26 @@ The API is available at `http://localhost:8000`, Swagger at `http://localhost:80
 | `SECRET_KEY`                   |    ✅    | Key used to sign JWTs (`app/auth.py`, fails at startup if missing)                                                                     |
 | `ALGORITHM`                    |    ✅    | JWT algorithm, e.g. `HS256`                                                                                                            |
 | `ACCESS_TOKEN_EXPIRE_MINUTES`  |    ✅    | Token lifetime in minutes                                                                                                              |
-| `TEST_DATABASE_URL`            |    —    | Reserved for a future test suite against a separate DB; **not yet used** by the code                                                    |
+| `TEST_DATABASE_URL`            |    —    | Database used by the test suite (`pytest`); must be different from `DATABASE_URL`, tests refuse to run otherwise                                                    |
 | `CORS_ORIGINS`                 |    —    | Comma-separated list of frontend origins allowed by CORS. Defaults to `http://localhost:5173,http://127.0.0.1:5173`; set it to the frontend's URL in production |
 
 See `backend/.env.example`.
+
+#### Tests and linting
+
+The tests run against a **separate** PostgreSQL database, never the one in `DATABASE_URL`. A throwaway container is enough:
+
+```bash
+docker run -d --name gymcoach-test-db -e POSTGRES_PASSWORD=test -e POSTGRES_DB=gymcoach_test -p 5433:5432 postgres:16
+# then add to backend/.env:
+# TEST_DATABASE_URL=postgresql+asyncpg://postgres:test@localhost:5433/gymcoach_test
+
+cd backend
+uv run pytest             # run from backend/
+uv run ruff check .       # linter
+```
+
+`tests/conftest.py` points the app at `TEST_DATABASE_URL` before importing it and exits if the variable is missing or equal to `DATABASE_URL`. It applies the Alembic migrations once per session and truncates every table before each test. Current coverage: login, the `GET /api/clients/` access rules (including coach ownership) and `GET /api/exercises/`.
 
 ### Frontend
 
@@ -129,6 +145,17 @@ Configuration comes from the git-ignored `.env` at the repository root (see `.en
 | `VITE_API_URL`                                   | Where the **browser** reaches the backend (`http://localhost:8000`). It is baked into the frontend at build time, so rebuild (`--build`) after changing it. |
 
 ---
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main`:
+
+| Job        | Steps                                                                                                    |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| `frontend` | `npm ci` → `npm run lint` → `npm run build`                                                              |
+| `backend`  | `uv sync --frozen` → `ruff check` → app import smoke test → `pytest` against a PostgreSQL service container |
+
+`main` is protected: changes go through a pull request and both jobs must pass before merging. Dependabot (`.github/dependabot.yml`) opens weekly update PRs for the npm and uv dependencies and for the GitHub Actions used by the workflow, so they go through the same checks.
 
 ## Backend Architecture
 
@@ -193,4 +220,4 @@ uv run alembic upgrade head
 3. Fix the `UserMe` type to match the backend's camelCase `fullName`.
 4. Add `POST`/`PATCH`/`DELETE` endpoints for exercises (coach only) and wire up the create/edit/delete controls.
 5. Build out `StoricoPage` (workout history) and `NotePage` (coach notes) — both currently placeholders.
-6. Add a test suite against `TEST_DATABASE_URL`, which is already provisioned for but unused.
+6. Extend the test suite: program ownership (`GET /api/clients/{id}/program`), session saving, and frontend tests.
