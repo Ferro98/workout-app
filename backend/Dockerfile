@@ -27,6 +27,8 @@ RUN /usr/local/bin/pip uninstall -y setuptools wheel \
     && apt-get install -y --only-upgrade zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
+RUN /usr/local/bin/pip install --no-cache-dir --no-deps "urllib3==1.26.4"
+
 COPY --from=build /app/.venv /app/.venv
 COPY app ./app
 COPY alembic ./alembic
