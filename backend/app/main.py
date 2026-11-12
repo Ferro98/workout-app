@@ -1,10 +1,14 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # Importa i router dalla tua cartella api
 from app.api import auth, clients, exercises, programs, sessions
+from app.db import get_db
 
 app = FastAPI(title="Workout App API")
 
@@ -42,3 +46,12 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/health/ready")
+async def health_ready(db: AsyncSession = Depends(get_db)):
+    try:
+        await db.execute(select(1))
+        return {"status": "ok"}
+    except SQLAlchemyError:
+        raise HTTPException(status_code=503, detail="DB unavailable.") from None
