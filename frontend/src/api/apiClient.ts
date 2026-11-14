@@ -1,7 +1,15 @@
 // src/api/apiClient.ts
 
+declare global {
+  interface Window {
+    __CONFIG__?: { API_URL?: string };
+  }
+}
+
 export const API_BASE_URL: string =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+  window.__CONFIG__?.API_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000";
 
 /**
  * Funzione base che wrappa la fetch nativa.
