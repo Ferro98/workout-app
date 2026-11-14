@@ -71,6 +71,12 @@ uv run python -m app.seed   # creates coach@test.com / password123 + demo data
 uv run fastapi dev app/main.py
 ```
 
+For a real (non-demo) environment, load only the exercise catalog instead. It creates no users and can be run any number of times:
+
+```bash
+uv run python -m app.seed_catalog
+```
+
 The API is available at `http://localhost:8000`, Swagger at `http://localhost:8000/docs`.
 
 #### Environment variables (`backend/.env`)
@@ -101,7 +107,12 @@ uv run pytest             # run from backend/
 uv run ruff check .       # linter
 ```
 
-`tests/conftest.py` points the app at `TEST_DATABASE_URL` before importing it and exits if the variable is missing or equal to `DATABASE_URL`. It applies the Alembic migrations once per session and truncates every table before each test. Current coverage: login, the `GET /api/clients/` access rules (including coach ownership) and `GET /api/exercises/`.
+`tests/conftest.py` points the app at `TEST_DATABASE_URL` before importing it and exits if the variable is missing or equal to `DATABASE_URL`. It applies the Alembic migrations once per session and truncates every table before each test. Current coverage: login, the `GET /api/clients/` access rules (including coach ownership), `GET /api/exercises/`, the health endpoints and the seed scripts.
+
+#### Health endpoints
+
+- `GET /health`: liveness. Always `200` while the process is up; it does not touch the database. Docker uses it for the container healthcheck.
+- `GET /health/ready`: readiness. Runs `SELECT 1`; answers `200`, or `503` if the database is unreachable (without leaking error details). Meant for deploy platforms, which should only route traffic to an instance that can reach its database.
 
 ### Frontend
 
@@ -114,6 +125,8 @@ npm run dev
 ```
 
 The app runs on `http://localhost:5173`. By default it expects the backend on `http://localhost:8000`; to point it somewhere else, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL` (the file is git-ignored; Vite reads it at startup, so restart `npm run dev` after changing it).
+
+The API URL is resolved in this order: `window.__CONFIG__.API_URL` (from `/config.js`, see the Docker section), then `VITE_API_URL`, then `http://localhost:8000`. An empty value counts as missing.
 
 ### Run everything with Docker
 
@@ -131,9 +144,9 @@ How the stack fits together:
 
 - **`db`**: PostgreSQL 16. Data lives in the named volume `db-data`, so it survives `docker compose down` (but not `down -v`).
 - **`migrate`**: one-off service that runs `alembic upgrade head` once the database is healthy, then exits. The backend only starts if it succeeds.
-- **`backend`**: the FastAPI image (`backend/Dockerfile`), running as a non-root user, with a `/health` healthcheck.
-- **`frontend`**: the Vite build served by unprivileged nginx (`frontend/Dockerfile`, `frontend/nginx.conf`), with SPA fallback to `index.html`.
-- **`seed`**: only runs on demand (`--profile seed`). It re-creates a demo program on every run, so don't use it on a database you care about.
+- **`backend`**: the FastAPI image (`backend/Dockerfile`), running as a non-root user, with a `/health` healthcheck. It is built in two stages, so `uv` is not part of the final image.
+- **`frontend`**: the Vite build served by unprivileged nginx (`frontend/Dockerfile`, `frontend/nginx.conf`), with SPA fallback to `index.html`. The API URL is **not** baked into the image: at start-up `frontend/docker-entrypoint.d/40-runtime-config.sh` writes `config.js` from the `API_URL` variable, so the same image works in any environment. `config.js` is served with `no-cache` and excluded from the PWA precache.
+- **`seed`**: only runs on demand (`--profile seed`). It re-creates a demo program on every run, so don't use it on a database you care about. It also creates demo accounts with a known password: never run it in production, use `python -m app.seed_catalog` there.
 
 Configuration comes from the git-ignored `.env` at the repository root (see `.env.example`):
 
@@ -142,7 +155,7 @@ Configuration comes from the git-ignored `.env` at the repository root (see `.en
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credentials of the local database. The password is only applied the first time the volume is created. |
 | `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT settings for the backend.                                                                  |
 | `CORS_ORIGINS`                                   | Origin the browser loads the frontend from (`http://localhost:8080`).                                  |
-| `VITE_API_URL`                                   | Where the **browser** reaches the backend (`http://localhost:8000`). It is baked into the frontend at build time, so rebuild (`--build`) after changing it. |
+| `API_URL`                                        | Where the **browser** reaches the backend (`http://localhost:8000`). It is read by the frontend container at start-up, so after changing it just recreate the container (`docker compose up -d`); no rebuild needed. |
 
 ---
 
@@ -155,7 +168,18 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pu
 | `frontend` | `npm ci` → `npm run lint` → `npm run build`                                                              |
 | `backend`  | `uv sync --frozen` → `ruff check` → app import smoke test → `pytest` against a PostgreSQL service container |
 
-`main` is protected: changes go through a pull request and both jobs must pass before merging. Dependabot (`.github/dependabot.yml`) opens weekly update PRs for the npm and uv dependencies and for the GitHub Actions used by the workflow, so they go through the same checks.
+A second workflow, `.github/workflows/docker.yml`, handles the container images:
+
+| Job       | Steps                                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `build`   | One job per image (`backend`, `frontend`): build → [Trivy](https://trivy.dev) scan → publish. A `CRITICAL` or `HIGH` finding with an available fix fails the job. |
+| `compose` | Checks that `docker-compose.yml` is valid with the example `.env`.                                                                     |
+
+- **Publishing** happens only on pushes to `main`, after the scan passes: images go to `ghcr.io/ferro98/gymcoach-backend` and `…-frontend`, tagged with the **commit SHA** (never `latest`), so a running version always maps to one commit. Pull requests build and scan but never push.
+- **Weekly rebuild**: every Monday (05:00 UTC) the images are rebuilt from scratch, without layer cache and with fresh base images, and scanned again. It never publishes; a red run means a new vulnerability showed up in a base image or dependency.
+- Actions are pinned to commit SHAs.
+
+`main` is protected: changes go through a pull request, and the `frontend`, `backend`, `build (backend)`, `build (frontend)` and `compose` checks must pass (and the branch must be up to date) before merging. GitHub secret scanning and push protection are enabled. Dependabot (`.github/dependabot.yml`) opens weekly update PRs for the npm and uv dependencies and for the GitHub Actions used by the workflows, so they go through the same checks.
 
 ## Backend Architecture
 
@@ -168,7 +192,8 @@ backend/app/
 ├── schemas.py           # Pydantic v2 schemas, BaseSchema with automatic camelCase alias
 ├── enums.py             # shared StrEnums (ExerciseType, ExerciseCategory, DiffStatus)
 ├── diff.py              # pure logic for comparing two program versions
-├── seed.py              # seeds a demo coach + client + exercises + program
+├── seed.py              # seeds a demo coach + client + exercises + program (development only)
+├── seed_catalog.py      # loads only the exercise catalog, idempotent, safe for production
 ├── api/                 # FastAPI routers (auth, clients, exercises, programs, sessions)
 └── crud/                 # DB access per domain + diff_service (diff/history orchestrator)
 ```
