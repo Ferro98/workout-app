@@ -10,6 +10,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // config.js is rewritten when the container starts: it must always come from the network
+        globIgnores: ['config.js'],
+      },
       manifest: {
         name: 'GymCoach',
         short_name: 'GymCoach',
