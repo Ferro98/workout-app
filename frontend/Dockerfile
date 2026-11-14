@@ -5,8 +5,6 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:alpine
@@ -16,7 +14,8 @@ RUN apk upgrade --no-cache
 USER nginx
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build --chown=nginx /app/dist /usr/share/nginx/html
+COPY --chmod=755 docker-entrypoint.d/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 
 EXPOSE 8080
 

@@ -23,9 +23,7 @@ jobs:
       matrix:
         include:
           - service: backend
-            build-args: ""
           - service: frontend
-            build-args: VITE_API_URL=http://localhost:8000
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -39,7 +37,6 @@ jobs:
           pull: ${{ github.event_name == 'schedule' }}
           no-cache: ${{ github.event_name == 'schedule' }}
           tags: ghcr.io/ferro98/gymcoach-${{ matrix.service }}:${{ github.sha }}
-          build-args: ${{ matrix.build-args }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -61,7 +58,6 @@ jobs:
           context: ${{ matrix.service }}
           push: true
           tags: ghcr.io/ferro98/gymcoach-${{ matrix.service }}:${{ github.sha }}
-          build-args: ${{ matrix.build-args }}
           cache-from: type=gha,scope=${{ matrix.service }}
   compose:
     runs-on: ubuntu-latest
