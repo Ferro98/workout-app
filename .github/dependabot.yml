@@ -8,6 +8,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Node typings must follow the Node version we run (22 in CI and Docker),
+      # not the latest major: bump them by hand when we upgrade Node itself
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: uv
     directory: /backend
     schedule:
