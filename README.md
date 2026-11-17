@@ -75,6 +75,7 @@ For a real (non-demo) environment, load only the exercise catalog instead. It cr
 
 ```bash
 uv run python -m app.seed_catalog
+uv run python -m app.create_coach   # asks for email, name and password (>= 12 chars) of the first coach
 ```
 
 The API is available at `http://localhost:8000`, Swagger at `http://localhost:8000/docs`.
@@ -90,6 +91,7 @@ The API is available at `http://localhost:8000`, Swagger at `http://localhost:80
 | `ACCESS_TOKEN_EXPIRE_MINUTES`  |    ✅    | Token lifetime in minutes                                                                                                              |
 | `TEST_DATABASE_URL`            |    —    | Database used by the test suite (`pytest`); must be different from `DATABASE_URL`, tests refuse to run otherwise                                                    |
 | `CORS_ORIGINS`                 |    —    | Comma-separated list of frontend origins allowed by CORS. Defaults to `http://localhost:5173,http://127.0.0.1:5173`; set it to the frontend's URL in production |
+| `ALLOW_PUBLIC_REGISTRATION`    |    —    | Set to `true` to let anyone create a **client** account through `POST /auth/register`. Off by default (`403`). Coaches can never self-register: create them with `python -m app.create_coach` |
 
 See `backend/.env.example`.
 
@@ -178,6 +180,8 @@ A second workflow, `.github/workflows/docker.yml`, handles the container images:
 - **Publishing** happens only on pushes to `main`, after the scan passes: images go to `ghcr.io/ferro98/gymcoach-backend` and `…-frontend`, tagged with the **commit SHA** (never `latest`), so a running version always maps to one commit. Pull requests build and scan but never push.
 - **Weekly rebuild**: every Monday (05:00 UTC) the images are rebuilt from scratch, without layer cache and with fresh base images, and scanned again. It never publishes; a red run means a new vulnerability showed up in a base image or dependency.
 - Actions are pinned to commit SHAs.
+
+A third workflow, `.github/workflows/deploy.yml`, deploys the backend to Render. It runs when the `Docker` workflow finishes successfully on a push to `main` (never for pull requests or the weekly rebuild) and calls the service's Render deploy hook with `imgURL` set to `ghcr.io/ferro98/gymcoach-backend:<commit SHA>`, so Render runs exactly the image that was just published. The hook URL is the repository secret `RENDER_DEPLOY_HOOK_BACKEND`. Deploys are serialized: two merges in a row never cancel each other. Database migrations and the frontend are not part of it yet, so run `alembic upgrade head` against the production database by hand when a release includes a migration.
 
 `main` is protected: changes go through a pull request, and the `frontend`, `backend`, `build (backend)`, `build (frontend)` and `compose` checks must pass (and the branch must be up to date) before merging. GitHub secret scanning and push protection are enabled. Dependabot (`.github/dependabot.yml`) opens weekly update PRs for the npm and uv dependencies and for the GitHub Actions used by the workflows, so they go through the same checks.
 
