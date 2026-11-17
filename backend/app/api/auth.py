@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
@@ -33,6 +35,13 @@ class TokenResponse(BaseModel):
 
 @router.post("/register", response_model=TokenResponse)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    # Public sign-up is off unless explicitly enabled, and it can never create a coach:
+    # coaches are created by an operator (python -m app.create_coach)
+    if os.getenv("ALLOW_PUBLIC_REGISTRATION", "").lower() != "true":
+        raise HTTPException(status_code=403, detail="Registration is disabled")
+    if body.role != "client":
+        raise HTTPException(status_code=403, detail="Only client accounts can self-register")
+
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email già registrata")
