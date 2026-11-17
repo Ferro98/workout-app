@@ -51,7 +51,7 @@ async def main():
         result_coach = await create_coach(db, email, name, password)
 
         if not result_coach:
-            print(f"Coach already exists")
+            print("Coach already exists")
             sys.exit(1)
 
         print(f"Coach created with ID: {result_coach.id}")
