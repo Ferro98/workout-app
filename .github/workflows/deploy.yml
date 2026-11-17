@@ -1,0 +1,27 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [Docker]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    # Only after a successful push build on main (not PRs, not the weekly schedule)
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+          IMAGE: ghcr.io/ferro98/gymcoach-backend:${{ github.event.workflow_run.head_sha }}
+        run: |
+          encoded=$(jq -rn --arg v "$IMAGE" '$v | @uri')
+          curl --fail --silent --show-error -X POST "${HOOK}&imgURL=${encoded}"
